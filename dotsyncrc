@@ -35,15 +35,6 @@ vimrc_background
 
 #bin:bin
 #ctags/ctags
-#cmus
-#curl/curlrc
-#git/gitconfig
-#git/gitignore
-#git/gitattributes
-#git/tigrc
-#git/gitk
-#gnupg
-#grc
 #vim/dotvim:.vim
 #zsh/dotzsh:.zsh
 [endfiles]
