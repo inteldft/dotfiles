@@ -51,7 +51,7 @@ vimrc_background
 ## hostname                     type=masterhost, ANY or NONE    files=dotfile:tolink,another:tolink
 [hosts]
 #host1.example.com               git=ANY                        files=custom/dotfile    #git repo, pull from anywhere and link a custom dotfile
-sccj002253          git=NONE                                                #git repo, pull from anywhere
+sccj002253.sc.intel.com          git=ANY                                                #git repo, pull from anywhere
 fcab1221            git=sccj002253.sc.intel.com
 
 
