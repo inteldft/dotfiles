@@ -1,0 +1,57 @@
+[alias]
+	add-unmerged = "!f() { git ls-files --unmerged | cut -f2 | sort -u ; }; git add `f`"
+	aliases = !git config --get-regexp 'alias.*' | colrm 1 6 | sed 's/[ ]/ = /'
+	author = "!f() { git log --author="$1" ; }; f"
+	self-blame = "!f() { git log --author=\"$(git config user.name)\" -p --follow $1 ; }; f"
+	ci = commit
+	co = checkout
+	pull = pull --rebase
+	unmerged = diff --name-only --diff-filter=U
+	lc = log origin..HEAD --name-status --no-merges
+	lchanges = log origin..HEAD
+	parent = remote show origin
+	rc = log HEAD..origin --name-status --no-merges
+	rchanges = log HEAD..origin
+	root = rev-parse --show-toplevel
+	st = status -uno
+	df = diff -w
+	bl = blame -wM
+	ssave  = "!f() { git stash save  $*    stash^{/$(git rev-parse --abbrev-ref HEAD)}; }; f"
+	sshow  = "!f() { git stash show  $* -p stash^{/$(git rev-parse --abbrev-ref HEAD)}; }; f"
+	sapply = "!f() { git stash apply $*    stash^{/$(git rev-parse --abbrev-ref HEAD)}; }; f"
+	sdrop  = "!f() { git stash drop stash@{$1}; }; f"
+[color]
+	ui = auto
+[core]
+	pager = less -MIRFXS
+	preloadindex = true
+	sharedrepository = 0640
+[diff]
+	mnemonicprefix = true
+	renames = true
+[http]
+	proxy = http://proxy.sc.intel.com:911
+[https]
+	proxy = http://proxy.sc.intel.com:911
+[intel]
+	clone-minimum-free-kb = 10485760
+	userInitVersion = 1
+[log]
+	decorate = true
+[merge]
+	tool = p4merge
+	conflictstyle = diff3
+	renamelimit = 999999
+[mergetool "kdiff3_noauto"]
+	cmd = /p/hdk/rtl/proj_tools/git/da_tools/14.06.0/kdiff3-noauto.sh $TOOL_MODE $base_present $MERGED $LOCAL $REMOTE $BASE
+[mergetool "p4merge"]
+	path = /usr/intel/bin/p4merge
+[pack]
+	threads = 0
+[push]
+	default = tracking
+[receive]
+	denycurrentbranch = refuse
+[user]
+	email = troy.j.hinckley@intel.com
+	name = Hinckley, Troy J

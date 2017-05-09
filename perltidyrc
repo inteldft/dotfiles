@@ -1,0 +1,6 @@
+# don't change line breaks
+-fnl
+# maximum line length
+#-l=120
+# use variable line length
+#-vmll

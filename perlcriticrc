@@ -1,0 +1,44 @@
+severity = 1
+top = 100
+
+# adjusted policies
+[Subroutines::ProhibitSubroutinePrototypes]
+severity = 2
+
+[ValuesAndExpressions::ProhibitNoisyQuotes]
+severity = 1
+
+[InputOutput::RequireCheckedSyscalls]
+exclude_functions = print say close
+
+[ValuesAndExpressions::ProhibitMagicNumbers]
+allowed_values = 0 1 -1 2
+allowed_types = Hex Binary
+
+[Variables::RequireLocalizedPunctuationVars]
+allow = %ENV
+
+[InputOutput::ProhibitBacktickOperators]
+only_in_void_context = 1
+
+[TestingAndDebugging::ProhibitNoWarnings]
+allow = qw
+
+[Documentation::RequirePodSections]
+lib_sections    = NAME | SYNOPSIS | DESCRIPTION | AUTHOR | LICENSE AND COPYRIGHT
+script_sections = NAME | USAGE    | DESCRIPTION | AUTHOR | LICENSE AND COPYRIGHT
+
+# disabled policies
+[-ControlStructures::ProhibitPostfixControls]
+[-ControlStructures::ProhibitUnlessBlocks]
+[-ValuesAndExpressions::ProhibitEmptyQuotes]
+[-RegularExpressions::RequireLineBoundaryMatching]
+[-RegularExpressions::RequireDotMatchAnything]
+[-RegularExpressions::RequireExtendedFormatting]
+[-RegularExpressions::ProhibitEnumeratedClasses]
+[-InputOutput::RequireBriefOpen]
+[-InputOutput::RequireCheckedClose]
+[-CodeLayout::RequireTidyCode]
+[-Modules::RequireVersionVar]
+[-Documentation::PodSpelling]
+[-CodeLayout::ProhibitParensWithBuiltins]
