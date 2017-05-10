@@ -35,6 +35,15 @@ vimrc_background
 
 #bin:bin
 #ctags/ctags
+#cmus
+#curl/curlrc
+#git/gitconfig
+#git/gitignore
+#git/gitattributes
+#git/tigrc
+#git/gitk
+#gnupg
+#grc
 #vim/dotvim:.vim
 #zsh/dotzsh:.zsh
 [endfiles]
@@ -42,8 +51,8 @@ vimrc_background
 ## hostname                     type=masterhost, ANY or NONE    files=dotfile:tolink,another:tolink
 [hosts]
 #host1.example.com               git=ANY                        files=custom/dotfile    #git repo, pull from anywhere and link a custom dotfile
-sccj002253.sc.intel.com          git=ANY                                                #git repo, pull from anywhere
-fcab1221.fc.intel.com            git=ANY
+sccj002253          git=NONE                                                #git repo, pull from anywhere
+fcab1221            git=sccj002253.sc.intel.com
 
 #host3.example.com               git=ANY                                                #git repo, pull from anywhere
 #host4.example.com               git=host5.example.com                                  #git repo, pull from host5
