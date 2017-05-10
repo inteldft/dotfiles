@@ -1,0 +1,335 @@
+#!/usr/bin/env perl
+########################################################################
+# csh-source.pl
+#   source a csh script and convert actions for use in a better shell
+########################################################################
+
+use File::Basename;             # Enable dirname() and basename()
+use Getopt::Long qw(:config pass_through permute);
+use strict;
+use warnings;
+use Const::Fast;
+use English qw{ -no_match_vars }; # avoid regex penalties
+use List::MoreUtils qw{any};
+use IPC::Open3;
+no warnings qw{qw}; # Avoid perl's warning that I (intentionally) have a '#' in a qw() list
+
+#*****************************************************************************
+# Global Variables
+#*****************************************************************************
+
+my $script_name = basename($PROGRAM_NAME);  # The name of the script.
+my @source_args = ();
+my %new_alias = ();
+my %new_env = ();
+
+
+#*****************************************************************************
+# Main
+#*****************************************************************************
+
+# Check the command line options
+my %opt = get_options();
+
+# extract the enviroment variables
+extract_script_changes('env', \&extract_env);
+my %changed_vars = process_env_vars();
+
+# extract the aliases
+if ( $opt{extract_alias} ) {
+    extract_script_changes('alias', \&extract_alias);
+    process_aliases() unless ($opt{diff});
+}
+
+if ($opt{diff}) {
+    show_diff(\%changed_vars);
+    exit(0);
+}
+
+if ( not $opt{inline}) {
+    start_new_shell(); #method will never return
+}
+
+exit(0);                        # Exit script with no error.
+
+
+######################################################
+## Subroutines
+#####################################################
+
+# Source the provided command(s) in csh and extract env vars and aliases
+sub extract_script_changes {
+    my $display_cmd = shift;
+    my $extract_func = shift;
+    my $config_location = "/tmp/$ENV{USER}.env_config.$PID";
+    my $source_args = $opt{source_args};
+    my $env_shell = $opt{env_shell};
+
+    # Note: modpath is a nasty 'script' encountered in many EC scripts, so hack in a definition
+    my $modpath_alias = "alias modpath \"set modpath=(\\!*); source \$EC_ENV_ROOT/bin/modpath; unset modpath\"\n";
+
+    my ($cmd_in, $cmd_out, $cmd_err);
+    use Symbol 'gensym'; $cmd_err = gensym;
+    # create and execute the shell command
+    my $env_cmd = "$env_shell -f -c '$modpath_alias && source $source_args && $display_cmd > $config_location'";
+    my $child_pid = open3($cmd_in, $cmd_out, $cmd_err, $env_cmd);
+
+    waitpid($child_pid, 0);
+    print {*STDOUT} <$cmd_out> unless ($opt{diff} or $opt{inline}); # forward output
+    if ($opt{inline} and not $opt{diff}) {
+        print {*STDERR} <$cmd_out>;
+    }
+    print {*STDERR} <$cmd_err>; # forward errors
+
+    const my $EXIT_CODE_OFFSET => 8;
+    my $env_exit_code = ( $CHILD_ERROR >> $EXIT_CODE_OFFSET );
+    if ($env_exit_code) {
+        die "-E- source '$opt{source_args}' failed with exit code $env_exit_code .\n";
+    }
+    open my $env_lines, '<', "$config_location"
+        or die "Could not open $config_location for reading. $OS_ERROR \n" ;
+
+    while (my $env_line = <$env_lines>) {
+        chomp $env_line;
+        $extract_func->($env_line);
+    }
+    close $env_lines;
+    return;
+}
+
+# break env line into hash
+sub extract_env {
+    my $env_line = shift;
+    my( $var, $val ) = split( /=/, $env_line, 2);
+    $new_env{$var} = $val;
+    return;
+}
+
+# break alias line into hash
+sub extract_alias {
+    my $alias_line = shift;
+    my( $alias, $val ) = split( /\s+/, $alias_line, 2 );
+    return if ( $alias eq 'modpath' );
+    if ( $alias and defined $val ) {
+        $val =~ s/'/\\'/g ;
+        # TODO: someday consider some basic translations such as setenv to export
+        $new_alias{$alias} = $val;
+    }
+    return;
+}
+
+# Apply the new env-var settings
+sub process_env_vars {
+    my %changed_vars = ();
+    my @all_env_vars = ( keys %ENV, keys %new_env );
+    my @ignore_vars = qw( * @ # ? - $ ! 0 _ PS1 SHLVL OLDPWD COMP_WORDBREAKS );
+    my $diff = $opt{diff};
+    my $inline = $opt{inline};
+    my $debug = $opt{debug};
+    for my $var ( @all_env_vars ) {
+        my $old_val = $ENV{$var};
+        my $new_val = $new_env{$var};
+        my $flag = (defined $old_val) ? 'def' : 'undef';
+        # don't process "special" variables
+        my $pattern = quotemeta $var ;
+        next if any { /$pattern/ } @ignore_vars ;
+
+        # Truth table for how to behave on env-var defined/undefined transitions
+        #  O = env-var was defined in *old* environment
+        #  N = env-var is defined in *new* environment
+        #
+        #  O N   ACTION                  REPORT
+        #  0 0   n/a (not observable)    n/a
+        #  0 1   Update %ENV             [undef] => val
+        #  1 0   Delete from %ENV        val => [undef]
+        #  1 1   Update %ENV             val => val (only if changed)
+        if ( (not (defined $old_val)) and (defined $new_val) ) {
+            $changed_vars{$var} = [ '[undef]', $new_val, ];
+            $ENV{$var} = $new_val;
+            print "export $var=\"$new_val\";\n" if ( $inline and not $diff );
+            print {*STDERR} "export $var=\"$new_val\";\n" if ( $debug );
+        } elsif ( defined $old_val and not defined $new_val ) {
+            $changed_vars{$var} = [ $old_val, '[undef]', ];
+            delete $ENV{$var};
+            print "unset $var;\n" if ( $inline and not $diff );
+            print {*STDERR} "unset $var;\n" if ( $opt{debug} );
+        } elsif ( defined $old_val and defined $new_val ) {
+            if ( $old_val ne $new_val ) {
+                $changed_vars{$var} = [ $old_val, $new_val ] if( $old_val ne $new_val );
+                $ENV{$var} = $new_val;
+                print "export $var=\"$new_val\";\n" if ( $inline and not $diff );
+                print {*STDERR} "export $var=\"$new_val\";\n" if ( $debug and not $diff );
+            }
+        } else {
+            die "ERROR: Both previous and new values are UNDEFINED for $var.\n";
+        }
+    }
+    return %changed_vars;
+}
+
+# process needed aliases
+sub process_aliases {
+    for my $extract_alias ( keys %new_alias ) {
+        print "alias $opt{extract_alias}='$new_alias{$opt{extract_alias}}';\n" if ( $opt{inline} );
+        print {*STDERR} "alias $opt{extract_alias}='$new_alias{$opt{extract_alias}}';\n" if ( $opt{debug} );
+    }
+    return;
+}
+
+# Show env-var diffs
+sub show_diff {
+    my $changed_vars = shift;
+    print "Env changes from 'source $opt{source_args}':\n";
+    for my $var ( sort keys %{$changed_vars} ) {
+        my( $old_val, $new_val ) = @{$changed_vars->{$var}};
+        printf "$var: $old_val => $new_val\n";
+    }
+    if ( $opt{extract_alias} ) {
+        print "Aliases added from 'source $opt{source_args}':\n";
+        for my $extract_alias ( keys %new_alias ) {
+            print "alias $opt{extract_alias}='$new_alias{$opt{extract_alias}}'\n";
+        }
+    }
+    return;
+}
+
+sub start_new_shell {
+    # Setup new shell command
+    my $shell_cmd;
+    my $groups = $opt{groups};
+    my $shell = $opt{shell};
+    my $shell_args = $opt{shell_args};
+    if ( $groups ) {
+        my @groups = split /,/, $groups;
+        my ( $primary_group ) = shift @groups;
+        $shell_cmd = "wash -s $shell -g $primary_group";
+        $shell_cmd .= " -n @groups" if (@groups);
+        $shell_cmd .= " -- -c $shell_args" if( $shell_args );
+    } else {
+        $shell_cmd = $shell;
+        $shell_cmd .= " -c $shell_args" if( $shell_args );
+    }
+
+    # Start new shell
+    print "Executing new shell: $shell_cmd\n" if( $opt{debug} );
+    exec( $shell_cmd );
+    # exec never returns
+}
+
+#*****************************************************************************
+# getSource() gets unprocessed arguments from GetOptions, which should
+#   be files to be sourced.  (Any arguments after -- are left in @ARGV for
+#   $shellArgs.)
+#*****************************************************************************
+sub get_source {
+    my ( @source_files ) = @_ ;
+    push @source_args, @source_files ;
+    return;
+}                               # getSource
+
+#*****************************************************************************
+# get_options() retrieves the arguments and checks them for validity.
+# Arguments:    none.
+# Returns:      nothing if all is OK, otherwise we call usage(), which dies.
+#*****************************************************************************
+sub get_options {
+    my %options = ();
+    my @err_msg;                 # Accumulate error messages here.
+
+
+    $options{source_args} = ();
+
+    $options{extract_alias} = 0;    # default to not providing aliases
+    $options{debug} = 0;
+    $options{diff} = 0;
+    $options{env_shell} = '/bin/csh' ;
+    $options{inline} = 0;   # default to spawning a subshell instead of running inline
+    $options{shell} = $ENV{SHELL};
+    $options{shell_args} = q{};
+
+    # run GetOptionsions to process arguments
+    if (GetOptions(
+        '<>'              => \&get_source,
+        'alias!'          => \$options{extract_alias},
+        'debug|d'         => \$options{debug},
+        'diff'            => \$options{diff},
+        'in-line|inline!' => \$options{inline},
+        'env_shell|e=s'   => \$options{env_shell},
+        'groups|g=s'      => \$options{groups},
+        'help|h|?'        => \$options{help},
+        'shell|s=s'       => \$options{shell},
+        'verbose+'        => \$options{verbose},
+    ) == 0) {
+        push @err_msg, "Invalid Arguments\n";
+    }
+
+    usage( @err_msg ) if ($options{help});
+
+    if ( scalar @source_args == 0 ) {
+        push @err_msg, 'You must provide file(s) to source.' ;
+    }
+
+    # print "------------@ARGV\n";
+    $options{shell_args}  = join q{ }, @ARGV;
+    $options{shell_args}  =~ s/^\s*\-\-(\s+|$)// ; # get rid of '--' which is passed through to @ARGV by pass_through
+    $options{source_args} = join( q{ }, @source_args );
+
+    if ($options{debug} and $options{verbose}) {
+        print {*STDERR} "Source Args are $options{source_args}.\n" ;
+        print {*STDERR} "Sub-shell Args are $opt{shell_args}.\n" ;
+    }
+
+    if ( $options{extract_alias} and not $options{inline} ) {
+        warn "Aliases are not supported in shell exec mode; use -inline and use eval to inherit aliases.\n" if ( $options{debug} or defined $options{verbose} );
+        $options{extract_alias} = 0 ;
+    }
+    usage( @err_msg ) if @err_msg;
+    return %options;
+
+}                               # get_options()
+
+#*****************************************************************************
+# usage() prints the usage message and exit(1).
+# Arguments:
+#     1. An array of error messages.  For the first array element, a beep is
+#        produced.  If an element is not an empty string, it is printed using
+#        warn() prior to the usage message.  If the error message array is
+#        empty, the usage message alone is printed.
+# Returns:      nothing: we exit here.
+#*****************************************************************************
+sub usage {
+    my @errors = @_;
+    foreach (@errors) {             # For each error,
+        warn "$_\n" if $_ ne q{}; # print it if it's not an empty string.
+    }
+
+    print << "_USAGE_";
+$script_name <options> [source file] [source args] <-- [shell cmds and args]>
+Desc: Updates current shell or exec'd subshell with the settings from the specified (csh-based) source-file and args
+Options:
+   -alias                  Extract and provide aliases set by [source file].  Requires -inline. (To omit aliases with -inline, use -noalias.)
+   -d|-debug               Enable reporting of debug messages
+   -diff                   Report env-var diffs that *would have been applied*; then exit (no new sub-shell)
+   -e|-env_shell <path>    Use this executable instead of /bin/csh to generate the env from source-file
+   -g|-groups              Set primary group of new sub-shell to first group here; additional groups are comma seperated
+   -h|-help                Show this usage message and then exit
+   -inline|-in_line        Use -inline with eval`` to update your \$SHELL in place with env vars and optionally aliases
+   -s|-shell <type>        Exec a new sub-shell of the specified type, instead of using \$SHELL
+
+Usages:
+ To invoke a subshell with environment variables set via [source file]:
+   $script_name [source file]
+
+ To invoke a subshell washed to 'hdfccpu' (as default group), 'coeenv' and 'user' with environment variables set via [source file]:
+   $script_name -g hdfccpu,coeenv,user [source file]
+
+ To update the current shell with aliases and env variables from [source file] (note these are backticks):
+   eval `$script_name -inline [source file]`
+
+ To update the current shell with env variables but not aliases from [source file]:
+   eval `$script_name -inline -noalias [source file]`
+
+_USAGE_
+
+    exit(1);
+}

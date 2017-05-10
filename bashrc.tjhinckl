@@ -41,7 +41,8 @@ shopt -s globstar # use ** to glob recursivley
 shopt -s histverify # let me edit history substution commands before I run them
 
 # Path to the bash it configuration
-export BASH_IT="/nfs/site/home/tjhinckl/personal/github/bash-it"
+export BASH_IT="$HOME/.bash-it"
+export BASH_IT_CUSTOM="$HOME/.bash"
 
 # Lock and Load a custom theme file
 # location /.bash_it/themes/
@@ -131,7 +132,7 @@ precmd() {
     if [[ ! -z ${MANUAL_MODEL_ROOT+x} ]]; then
         return
     fi
-    MODEL_ROOT=$("$HOME"/scripts/set_root.sh)
+    MODEL_ROOT=$(get-root)
     export MODEL_ROOT
 }
 
@@ -142,5 +143,4 @@ export HH_CONFIG=hicolor,keywords # use more colors and search by keywords
 # if this is interactive shell, then bind hh to Ctrl-r
 if [[ $- =~ .*i.* ]]; then bind '"\C-r": "\C-a hh -- \C-j"'; fi
 
-export PATH
 export HISTCONTROL=ignoredups:$HISTCONTROL
