@@ -157,32 +157,56 @@ setchassisvars () {
 }
 
 # set the vars required to run ESPF on a SS
-setdftvars () {
-    if [[ -z ${1+x} ]]; then
-        echo "Error: Need to provide a model to set dft variables"
-        return
-    fi
+if [ "$EC_SITE" == 'sc' ]; then
+    setdftvars () {
+        if [[ -z ${1+x} ]]; then
+            echo "Error: Need to provide a model to set dft variables"
+            return
+        fi
 
-    if [[ -z ${RTL_PROJ_LIB+x} ]]; then
-        echo "Error: need to source dev enviroment first (srcenv)"
-        return
-    fi
+        if [[ -z ${RTL_PROJ_LIB+x} ]]; then
+            echo "Error: need to source dev enviroment first (srcenv)"
+            return
+        fi
 
-    export STF_SPFSPEC=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.stf.spfspec
-    export TAP_SPFSPEC=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.tap.spfspec
-    export TAP2STF_MAP_FILE=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.tap2stf.map
-    export XWEAVE=$MODEL_ROOT/tools/ipgen/${1}/output/xweave/design_report.json
-    export REGLIST_DIR=$MODEL_ROOT/verif/reglist/${1}/dft
-    export ESPF_DIR=${ESPF_DIR-${HOME}/workspace/val_global_clean/spf_sequences.1p0/scan}
-    export DFT_GLOBAL_DIR=${DFT_GLOBAL_DIR-${HOME}/workspace/val_global_clean}
-    XWEAVE_REPO_ROOT=$(whichip ipconfig/xweave)
-    export XWEAVE_REPO_ROOT
-    if [[ ! -z ${LD_LIBRARY_PATH+x} ]];  then
+        export STF_SPFSPEC=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.stf.spfspec
+        export TAP_SPFSPEC=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.tap.spfspec
+        export TAP2STF_MAP_FILE=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.tap2stf.map
+        export XWEAVE=$MODEL_ROOT/tools/ipgen/${1}/output/xweave/design_report.json
+        export REGLIST_DIR=$MODEL_ROOT/verif/reglist/${1}/dft
+        export ESPF_DIR=${ESPF_DIR-${HOME}/workspace/val_global_clean/spf_sequences.1p0/scan}
+        export DFT_GLOBAL_DIR=${DFT_GLOBAL_DIR-${HOME}/workspace/val_global_clean}
+        XWEAVE_REPO_ROOT=$(whichip ipconfig/xweave)
+        export XWEAVE_REPO_ROOT
+        if [[ ! -z ${LD_LIBRARY_PATH+x} ]];  then
+            unset LD_LIBRARY_PATH
+        fi
+        # shellcheck disable=SC2119
+        srcspf
+
+    }
+else
+    setdftvars () {
+        if [[ -z ${RTL_PROJ_LIB+x} ]]; then
+            echo "Error: need to source dev enviroment first (srcenv)"
+            return
+        fi
+
+
+        export STF_SPFSPEC=$MODEL_ROOT/verif/tests/JTAG_BFM_CTT_files/spf/dnv.stf.spfspec
+        export TAP_SPFSPEC=$MODEL_ROOT/verif/tests/JTAG_BFM_CTT_files/spf/dnv.tap.spfspec
+        export TAP2STF_MAP_FILE=$MODEL_ROOT/verif/tests/dft/source_stfstf/dnv.topo
+        export REGLISTDIR=$MODEL_ROOT/verif/tests/lists/regression
+        export ESPFDIR=$MODEL_ROOT/verif/tests/dft/source_spf
+        export ITPPDIR=$MODEL_ROOT/verif/tests/dft/itpp
+        export DFT_GLOBAL_DIR=${DFT_GLOBAL_DIR-${HOME}/workspace/chassis_dft_val_global}
+
         unset LD_LIBRARY_PATH
-    fi
-    # shellcheck disable=SC2119
-    srcspf
-}
+        # shellcheck disable=SC2119
+        srcspf latest
+    }
+
+fi
 
 # interpret Netbatch exit codes
 nbexit () {

@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#!/usr/intel/pkgs/perl/5.14.1/bin/perl
 ########################################################################
 # csh-source.pl
 #   source a csh script and convert actions for use in a better shell
