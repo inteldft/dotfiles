@@ -1,9 +1,16 @@
 #!/usr/intel/bin/bash
 
+# Hostname is often only the host
+if [ "$HOST" == "$HOSTNAME" ]; then
+    export HOSTNAME
+    HOSTNAME=$HOST.$EC_SITE.intel.com
+fi
+
 if [ -z "$EC_SITE" ]; then
     EC_SITE=$(echo "$HOSTNAME" | awk -F '.' '{print $2}')
     export EC_SITE
 fi
+
 
 export LC_ALL=en_US.UTF-8 # use UTF-8 character encoding
 export ALL_PROXY="http://proxy.${EC_SITE}.intel.com:911" # proxy for anything
@@ -11,9 +18,9 @@ export HTTP_PROXY="http://proxy.${EC_SITE}.intel.com:911" # proxy for http
 export GCONFTOOL=gconftool-2 # required to configure the theme of Gnome
 export VERILATOR_ROOT=/nfs/site/home/tjhinckl/personal/verilator-3.884 # used to build verilator models
 export EDITOR=vim # editor for commit messages and command edits
-export SC_HOSTNAME=sccj002253.sc
-export FC_HOSTNAME=fcab1249.fc
-export PDX_HOSTNAME=plxd3507.pdx
+export SC_HOSTNAME=sccj002253.sc.intel.com
+export FC_HOSTNAME=fcab1249.fc.intel.com
+export PDX_HOSTNAME=plxd3507.pdx.intel.com
 
 
 # for non interative shells
@@ -142,5 +149,4 @@ export HH_CONFIG=hicolor,keywords # use more colors and search by keywords
 # if this is interactive shell, then bind hh to Ctrl-r
 if [[ $- =~ .*i.* ]]; then bind '"\C-r": "\C-a hh -- \C-j"'; fi
 
-export PATH
 export HISTCONTROL=ignoredups:$HISTCONTROL
