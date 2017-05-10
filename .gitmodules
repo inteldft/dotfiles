@@ -4,3 +4,9 @@
 [submodule "bash-it"]
 	path = bash-it
 	url = sccj002253.sc.intel.com:~/custom/dotfiles_bare/bash-it
+[submodule "autojump"]
+	path = autojump
+	url = sccj002253.sc.intel.com:~/custom/dotfiles_bare/autojump
+[submodule "history"]
+	path = history
+	url = sccj002253.sc.intel.com:~/custom/dotfiles_bare/history
