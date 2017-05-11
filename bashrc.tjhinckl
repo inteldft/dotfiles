@@ -87,7 +87,6 @@ bind "set bell-style visible" # don't 'ding' when ringing the bell
 # Load Bash It
 # shellcheck source=/nfs/site/home/tjhinckl/.bash-it/bash_it.sh
 [[ -s $BASH_IT/bash_it.sh ]] && source $BASH_IT/bash_it.sh
-# fi
 
 if [ "$(type -t pathmunge 2>/dev/null)" == 'function' ];then
     pathmunge "$HOME"/bin
@@ -151,3 +150,4 @@ export HH_CONFIG=hicolor,keywords # use more colors and search by keywords
 if [[ $- =~ .*i.* ]]; then bind '"\C-r": "\C-a hh -- \C-j"'; fi
 
 export HISTCONTROL=ignoredups:$HISTCONTROL
+
