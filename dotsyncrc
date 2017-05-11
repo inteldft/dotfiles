@@ -41,10 +41,12 @@ bin/cpanm:bin/cpanm
 bin/hh:bin/hh
 bin/hstr:bin/hstr
 bin/csh-source:bin/csh-source
+bin/fasd:bin/fasd
 
 # directories
 bash
 bash-it
+man:.local/share/man
 
 # emacs
 function-setup.el:personal/emacs/local/setup/function-setup.el
