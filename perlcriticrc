@@ -2,9 +2,14 @@ severity = 1
 top = 100
 
 # adjusted policies
+[Subroutines::ProhibitAmpersandSigils]
+severity = 2
+[InputOutput::ProhibitTwoArgOpen]
+severity = 3
+[InputOutput::ProhibitBarewordFileHandles]
+severity = 3
 [Subroutines::ProhibitSubroutinePrototypes]
 severity = 2
-
 [ValuesAndExpressions::ProhibitNoisyQuotes]
 severity = 1
 
@@ -12,8 +17,11 @@ severity = 1
 exclude_functions = print say close
 
 [ValuesAndExpressions::ProhibitMagicNumbers]
-allowed_values = 0 1 -1 2
+allowed_values = 0 1 -1 2 65535
 allowed_types = Hex Binary
+
+[Variables::ProhibitPunctuationVars]
+allow = $0 $!
 
 [Variables::RequireLocalizedPunctuationVars]
 allow = %ENV
@@ -29,16 +37,22 @@ lib_sections    = NAME | SYNOPSIS | DESCRIPTION | AUTHOR | LICENSE AND COPYRIGHT
 script_sections = NAME | USAGE    | DESCRIPTION | AUTHOR | LICENSE AND COPYRIGHT
 
 # disabled policies
+[-CodeLayout::ProhibitParensWithBuiltins]
+[-CodeLayout::RequireTidyCode]
+
 [-ControlStructures::ProhibitPostfixControls]
 [-ControlStructures::ProhibitUnlessBlocks]
-[-ValuesAndExpressions::ProhibitEmptyQuotes]
-[-RegularExpressions::RequireLineBoundaryMatching]
-[-RegularExpressions::RequireDotMatchAnything]
-[-RegularExpressions::RequireExtendedFormatting]
-[-RegularExpressions::ProhibitEnumeratedClasses]
+
+[-Documentation::PodSpelling]
+
 [-InputOutput::RequireBriefOpen]
 [-InputOutput::RequireCheckedClose]
-[-CodeLayout::RequireTidyCode]
+
 [-Modules::RequireVersionVar]
-[-Documentation::PodSpelling]
-[-CodeLayout::ProhibitParensWithBuiltins]
+
+[-RegularExpressions::ProhibitEnumeratedClasses]
+[-RegularExpressions::RequireDotMatchAnything]
+[-RegularExpressions::RequireExtendedFormatting]
+[-RegularExpressions::RequireLineBoundaryMatching]
+
+[-ValuesAndExpressions::ProhibitEmptyQuotes]
