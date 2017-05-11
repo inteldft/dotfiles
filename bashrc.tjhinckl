@@ -16,6 +16,12 @@ export FC_HOSTNAME=fcab1249.fc.intel.com
 export PDX_HOSTNAME=plxd3507.pdx.intel.com
 export MANPATH=$HOME/.local/share/man:$MANPATH
 
+if [ "$EC_SITE" == 'sc' ]; then
+    export DSHOST=sccj002253.sc.intel.com
+else
+    export DSHOST=fcab1221.fc.intel.com
+fi
+
 
 # for non interative shells
 if ! echo "$PATH" | /bin/grep -Eq "/usr/intel/bin"; then
