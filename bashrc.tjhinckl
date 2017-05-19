@@ -15,6 +15,7 @@ export SC_HOSTNAME=sccj002253.sc.intel.com
 export FC_HOSTNAME=fcab1249.fc.intel.com
 export PDX_HOSTNAME=plxd3507.pdx.intel.com
 export MANPATH=$HOME/.local/share/man:$MANPATH
+export PROMPT_DIRTRIM=5
 
 if [ "$EC_SITE" == 'sc' ]; then
     export DSHOST=sccj002253.sc.intel.com
