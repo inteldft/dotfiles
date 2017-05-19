@@ -129,11 +129,17 @@ sub extract_aliases {
         $val =~ s{source /p/hdk/rtl/hdk[.]rc -cfg shdk\d+}/SOURCE_AS_BASH $BASH_SRCENV/g; # developement enviroment sourcing
         $val =~ s/source\s+(.*?)\s*(;|$)/eval \$(csh-source -inline -alias $1)$2/gm; # source tcsh scripts
         $val =~ s/SOURCE_AS_BASH/source/gi; # make sure only bash sourcing left
-        if ($val =~ s/!:(\d+)/\$$1/g or $val =~ s/![*]/\$\@/g) { # if alias contains paramters, translate to bash function
+        # if alias contains paramters, translate to bash function
+        if (
+            $val =~ s/![*]/\$\@/g or            # !*   => $@
+            $val =~ s/!:(\d+)[*]/\${\@:$1}/g or # !:2* => ${@:2}
+            $val =~ s/!:(\d+)/\$$1/g            # !:1  => $1
+            ) {
             $new_func{$alias} = $val;
             return;
         }
-        $val =~ s/'/\\'/g unless $opt{diff};
+        $alias = '-- -' if $alias eq q{-};
+        $val =~ s/'/'\\''/g unless $opt{diff};
         $new_alias{$alias} = $val;
     }
     return;
