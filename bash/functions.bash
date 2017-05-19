@@ -1,4 +1,4 @@
-#!/usr/intel/pkgs/bash/4.1/bin/bash
+#!/usr/intel/bin/bash
 
 # print out the size of all files/directories in the specified directory and sort them by size
 dsize () {
@@ -11,7 +11,7 @@ man() {
 
 # source a C-shell script
 csrc() {
-    eval "$(csh-source --inline --noalias "$1")"
+    eval "$(csh-source --inline "$@")"
 }
 
 remount() {
@@ -25,6 +25,15 @@ rm-old () {
     fi
     echo "Removing files older than $1 day(s) in ${2-cwd}"
     find "${2-.}" -ctime +"$1" -exec rm -rf {} +
+}
+
+mdcd () {
+    if [[ -z ${1+x} ]]; then
+        echo "must specify a directory"
+        return
+    fi
+    mkdir -p "$1"
+    cd "$1" || return
 }
 
 # give me a clean path with nothing mixed up
@@ -100,30 +109,6 @@ save_history () {
 whichip () {
     ToolConfig.pl get_tool_path "$1"
 }
-
-# spf_setup_env_bash () {
-#     if [ -z "$SPF_ROOT" ]; then
-#         echo "SPF_ROOT should be set before sourcing spf_setup_env"
-#         return
-#     fi
-
-#     export SPF_PERL_LIB="$SPF_ROOT/lib/perl5"
-#     if [ ! -z "$LD_LIBRARY_PATH" ]; then
-#         export LD_LIBRARY_PATH="$SPF_ROOT/lib:$LD_LIBRARY_PATH"
-#     else
-#         export LD_LIBRARY_PATH="$SPF_ROOT/lib"
-#     fi
-
-#     LD_LIBRARY_PATH="$SPF_ROOT/lib:$LD_LIBRARY_PATH"
-#     LD_LIBRARY_PATH="$SPF_ROOT/lib/CMTS_libs:$LD_LIBRARY_PATH"
-#     LD_LIBRARY_PATH="$SPF_ROOT/lib/tar_lib:$LD_LIBRARY_PATH"
-#     LD_LIBRARY_PATH="$SPF_ROOT/lib/boost_lib:$LD_LIBRARY_PATH"
-#     LD_LIBRARY_PATH="$SPF_ROOT/lib/xml_lib:$LD_LIBRARY_PATH"
-#     LD_LIBRARY_PATH="$SPF_ROOT/lib/SPF_API_LIB:$LD_LIBRARY_PATH"
-#     LD_LIBRARY_PATH="$SPF_ROOT/lib/SPF_API_LIB/python:$LD_LIBRARY_PATH"
-#     export LD_LIBRARY_PATH
-
-# }
 
 # shellcheck disable=SC2120
 srcspf () {
