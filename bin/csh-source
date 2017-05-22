@@ -138,7 +138,7 @@ sub extract_aliases {
             $new_func{$alias} = $val;
             return;
         }
-        $alias = '-- -' if $alias eq q{-};
+        $alias =~ s/^-/-- -/; # don't interpret `-` as a flag
         $val =~ s/'/'\\''/g unless $opt{diff};
         $new_alias{$alias} = $val;
     }
