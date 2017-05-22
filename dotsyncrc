@@ -45,6 +45,7 @@ bin/csh-source:bin/csh-source
 bin/fasd:bin/fasd
 bin/fzf:bin/fzf
 bin/fzf-tmux:bin/fzf-tmux
+pygments/pygmentize:bin/pygmentize
 
 # directories
 bash
