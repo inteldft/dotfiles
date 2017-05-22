@@ -1,12 +1,12 @@
 [submodule "dotsync"]
 	path = dotsync
-	url = sccj002253.sc.intel.com:~/custom/dotfiles_bare/dotsync
+	url = sccj002253.sc.intel.com:~/custom/env_bare/dotsync
 [submodule "bash-it"]
 	path = bash-it
-	url = sccj002253.sc.intel.com:~/custom/dotfiles_bare/bash-it
+	url = sccj002253.sc.intel.com:~/custom/env_bare/bash-it
 [submodule "autojump"]
 	path = autojump
-	url = sccj002253.sc.intel.com:~/custom/dotfiles_bare/autojump
+	url = sccj002253.sc.intel.com:~/custom/env_bare/autojump
 [submodule "history"]
 	path = history
-	url = sccj002253.sc.intel.com:~/custom/dotfiles_bare/history
+	url = sccj002253.sc.intel.com:~/custom/env_bare/history
