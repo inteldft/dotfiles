@@ -167,8 +167,8 @@ if [ "$EC_SITE" == 'sc' ]; then
         export TAP2STF_MAP_FILE=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.tap2stf.map
         export XWEAVE=$MODEL_ROOT/tools/ipgen/${1}/output/xweave/design_report.json
         export REGLIST_DIR=$MODEL_ROOT/verif/reglist/${1}/dft
-        export ESPF_DIR=${ESPF_DIR-${HOME}/workspace/val_global_clean/spf_sequences.1p0/scan}
-        export DFT_GLOBAL_DIR=${DFT_GLOBAL_DIR-${HOME}/workspace/val_global_clean}
+        export ESPF_DIR=${ESPF_DIR-${HOME}/workspace/chassis_dft_val_global/spf_sequences.1p0/scan}
+        export DFT_GLOBAL_DIR=${DFT_GLOBAL_DIR-${HOME}/workspace/chassis_dft_val_global}
         XWEAVE_REPO_ROOT=$(whichip ipconfig/xweave)
         export XWEAVE_REPO_ROOT
         if [[ ! -z ${LD_LIBRARY_PATH+x} ]];  then

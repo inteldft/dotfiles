@@ -32,7 +32,6 @@ profile.tjhinckl
 spacemacs
 tmux.conf
 toprc
-vimrc
 vimrc_background
 fzf.bash
 
@@ -45,6 +44,7 @@ bin/csh-source:bin/csh-source
 bin/fasd:bin/fasd
 bin/fzf:bin/fzf
 bin/fzf-tmux:bin/fzf-tmux
+bin/diskhogs:bin/diskhogs
 pygments/pygmentize:bin/pygmentize
 
 # directories

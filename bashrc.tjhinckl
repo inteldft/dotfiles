@@ -1,7 +1,7 @@
 #!/usr/intel/bin/bash
 
 if [ -z "$EC_SITE" ]; then
-    EC_SITE=$(echo "$HOSTNAME" | awk -F '.' '{print $2}')
+    EC_SITE=$(/usr/intel/bin/sitecode)
     export EC_SITE
 fi
 
@@ -22,18 +22,6 @@ if [ "$EC_SITE" == 'sc' ]; then
 else
     export DSHOST=fcab1221.fc.intel.com
 fi
-
-
-# for non interative shells
-if ! echo "$PATH" | /bin/grep -Eq "/usr/intel/bin"; then
-    PATH="/usr/intel/bin:$PATH"
-fi
-if ! echo "$INPUTRC" | /bin/grep -Eq "$HOME/.inputrc"; then
-    INPUTRC="$HOME/.inputrc:$INPUTRC"
-fi
-
-export PATH
-export INPUTRC
 
 #dont load interactive config if using a non-interactive shell
 if [[ -z ${PS1+x} ]]; then
@@ -92,6 +80,10 @@ bind "set bell-style visible" # don't 'ding' when ringing the bell
 if [ "$(type -t pathmunge 2>/dev/null)" == 'function' ];then
     pathmunge "$HOME"/bin
 fi
+
+complete -F _fzf_path_completion -o default -o bashdefault e # add fzf completion to emacs
+export FZF_TMUX=1 # use tmux pane for fzf popup
+export FZF_COMPLETION_TRIGGER='ff' # use ff as a trigger sequence
 
 # shellcheck source=/nfs/site/home/tjhinckl/.bash-preexec.sh
 [[ -f ~/.bash-preexec.sh ]] && source ~/.bash-preexec.sh
