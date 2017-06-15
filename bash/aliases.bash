@@ -4,9 +4,8 @@ alias d='dir'
 alias dir='ls --format=vertical'
 alias helpcommand='whatis'
 alias l='ll'
-# alias man='/usr/intel/bin/tman !* || /usr/bin/man !*'
+alias man='/usr/intel/bin/tman !* || /usr/bin/man !*'
 alias o='less'
-# alias remount='/bin/mount -o remount,!*'
 alias runx='/usr/intel/common/pkgs/eclogin/1.0/bin/runx'
 alias v='vdir'
 alias vdir='ls --format=long'
@@ -22,12 +21,7 @@ alias win-xl='xrandr -s 1920x1200'
 alias win-l='xrandr -s 1920x1080'
 alias win-m='xrandr -s 1536x864'
 
-if [ "$EC_SITE" == 'sc' ]; then
-    alias srcenv='source /p/hdk/rtl/cad/x86-64_linux26/intel/Modules/3.2.10.2/init/bash; module load lv_cfg; unset module; export NBQSLOT=/SDG/sdg74/fe/build/chassis; export NBCLASS=SLES11SP4\&\&20G; export NBPOOL=sc_critical'
-    # alias srcenv='wash -g user -n soc socenv dnv socrtl soc73 srvr10nm hdk10nm shdk73 -- -c "tcsh -c '\''source ~/custom/env_aliases.csh ; source /p/hdk/rtl/hdk.rc -cfg shdk74 ; setenv NBQSLOT /SDG/sdg74/fe/build/chassis ; setenv NBCLASS SLES11SP4\&\&20G ; setenv nbpool sc_critical ; exec bash'\''"'
-elif [ "$EC_SITE" == 'fc' ]; then
-    alias srcenv='wash -g user -n soc socenv dnv socrtl soc73 srvr10nm hdk10nm shdk73 -- -c "tcsh -c '\''source /p/hdk/rtl/hdk.rc -cfg shdk73 ; setenv NBQSLOT /SDG/sdg74/fe/build/chassis ; setenv NBCLASS SLES11SP4\&\&20G ; setenv NBPOOL fc_critical ; exec bash'\''"'
-fi
+alias srcenv='source /p/hdk/rtl/cad/x86-64_linux26/intel/Modules/3.2.10.2/init/bash; module load lv_cfg; unset module; export NBQSLOT=/SDG/sdg74/fe/build/chassis; export NBCLASS=SLES11SP4\&\&20G; export NBPOOL=${EC_SITE}_critical'
 
 alias setroot='export MODEL_ROOT=`$HOME/scripts/set_root.sh`'
 alias tool-config='ToolConfig.pl get_tool_env spyglass | cut -f 2,3,4 -d " " | source /dev/stdin'

@@ -14,8 +14,16 @@ csrc() {
     eval "$(csh-source --inline "$@")"
 }
 
-remount() {
-   /bin/mount -o remount,"$*"
+count() {
+    find "${1-.}" -maxdepth 1 -type f | wc -l
+}
+
+rename() {
+    if [[ -z ${1+x} ]]; then
+        echo "USAGE: rename <perl substitution regex>"
+        return
+    fi
+    perl -we "for (glob '*') { (my \$name = \$_) =~ $1; rename(\$_, \$name) if (\$name ne \$_); }"
 }
 
 rm-old () {
