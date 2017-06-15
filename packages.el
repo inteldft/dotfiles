@@ -6,6 +6,7 @@
         smartparens
         highlight-numbers
         flycheck
+        ;; (perl-completion :toggle (configuration-layer/package-usedp 'auto-complete))
         ;; (plsense :toggle (configuration-layer/package-usedp 'auto-complete))
         ))
 
@@ -29,6 +30,7 @@
       ;; correct for Intel-style binary and hex notation
       (defalias 'my/perl-syntax-propertize-function
         (syntax-propertize-rules
+         ("\\('\\)FILL:[0-9a-fA-FXZLH]+" (1 ".")) ;; FILL
          ("\\('\\)DEFAULT\\([]}),;[:space:]]\\|$\\)" (1 ".")) ;; DEFAULT
          ("\\('b\\)\\([01XZLH]+\\|[$][a-zA-Z_\\{][a-zA-Z0-9_]*\\)\\([]}),;[:space:]]\\|$\\)"        (1 "."))   ;; binary
          ("\\('o\\)\\([0-7XZLH]+\\|[$][a-zA-Z_\\{][a-zA-Z0-9_]*\\)\\([]}),;[:space:]]\\|$\\)"       (1 "."))   ;; octal
@@ -48,7 +50,7 @@
 (defun perl/init-cperl-mode ()
   (use-package cperl-mode
     :defer t
-    :mode "\\.\\([pP][pLlm]\\|al\\)\\'"
+    :mode "\\.\\(p[lm]x?\\|P[LM]X?\\)\\'"
     :interpreter "perl"
     :interpreter "perl5"
 
@@ -103,6 +105,10 @@
               'font-lock-comment-face
             'font-lock-string-face) t)))
 
+      ;; tab key will ident all marked code when tab key is pressed
+      (add-hook 'cperl-mode-hook
+                (lambda () (local-set-key (kbd "<tab>") 'indent-for-tab-command)))
+
       ;; Use less horrible colors for cperl arrays and hashes
       (set-face-attribute 'cperl-array-face nil :foreground  "#DD7D0A"    :background  'unspecified :weight 'unspecified)
       (set-face-attribute 'cperl-hash-face nil  :foreground  "OrangeRed3" :background  'unspecified :weight 'unspecified)
@@ -114,21 +120,10 @@
       (setq cperl-continued-statement-offset 4) ;; if a statement continues indent it to four spaces
       (setq cperl-indent-parens-as-block t) ;; parentheses are indented with the block and not with scope
 
-      ;; tab key will ident all marked code when tab key is pressed
-      (add-hook 'cperl-mode-hook
-                (lambda () (local-set-key (kbd "<tab>") 'indent-for-tab-command)))
-
-      ;; fix a bug with electric mode and smartparens https://github.com/syl20bnr/spacemacs/issues/480
-      (when (configuration-layer/package-usedp 'smartparens)
-        (add-hook 'smartparens-enabled-hook  (lambda () (define-key cperl-mode-map "{" nil)))
-        (add-hook 'smartparens-disabled-hook  (lambda () (define-key cperl-mode-map "{" 'cperl-electric-lbrace))))
-
       (font-lock-add-keywords 'cperl-mode
                               '(("\\_<const\\|croak\\_>" . font-lock-keyword-face)))
       (font-lock-add-keywords 'cperl-mode
                               '(("\\_<say\\|any\\_>" . cperl-nonoverridable-face)))
-
-
       )))
 
 (defun perl/post-init-flycheck ()
@@ -144,7 +139,32 @@
   (push "/nfs/site/proj/dpg/tools" flycheck-perl-include-path))
 
 (defun perl/post-init-smartparens ()
-  (sp-local-pair 'perl-mode "'" nil :actions nil))
+  (sp-local-pair 'perl-mode "'" nil :actions nil)
+  ;; fix a bug with electric mode and smartparens https://github.com/syl20bnr/spacemacs/issues/480
+  (with-eval-after-load "cperl-mode"
+    (add-hook 'smartparens-enabled-hook  (lambda () (define-key cperl-mode-map "{" nil)))
+    (add-hook 'smartparens-disabled-hook  (lambda () (define-key cperl-mode-map "{" 'cperl-electric-lbrace)))))
+
+(defun perl/post-init-highlight-numbers ()
+  (with-eval-after-load "highlight-numbers"
+    (puthash
+     'perl-mode "\\_<[[:digit:]].*?\\_>\\|'\\(?:h[[:xdigit:]]*?\\|b[01]*?\\|o[0-7]*?\\|d[[:digit:]]*?\\)\\_>"
+     highlight-numbers-modelist)))
+
+;; (defun perl/init-perl-completion ()
+;;   (use-package perl-completion
+;;     :defer t
+;;     :config
+;;     (progn
+;;       (setq plcmp-default-lighter  "")
+;;       (add-hook
+;;        'cperl-mode-hook
+;;        (lambda ()
+;;          (auto-complete-mode t)
+;;          (perl-completion-mode t)
+;;          (make-variable-buffer-local 'ac-sources)
+;;          (setq ac-sources
+;;                '(ac-source-perl-completion)))))))
 
 ;; (defun perl/init-plsense ()
 ;;   (use-package plsense
@@ -159,9 +179,3 @@
 ;;         "p" 'plsense-popup-help
 ;;         "h" 'plsense-display-help-buffer
 ;;         "d" 'plsense-jump-to-definition))))
-
-(defun perl/post-init-highlight-numbers ()
-  (with-eval-after-load "highlight-numbers"
-    (puthash
-     'perl-mode "\\_<[[:digit:]].*?\\_>\\|'\\(?:h[[:xdigit:]]*?\\|b[01]*?\\|o[0-7]*?\\|d[[:digit:]]*?\\)\\_>"
-     highlight-numbers-modelist)))

@@ -1,7 +1,7 @@
 #!/usr/intel/bin/bash
 
 if [ -z "$EC_SITE" ]; then
-    EC_SITE=$(echo "$HOSTNAME" | awk -F '.' '{print $2}')
+    EC_SITE=$(/usr/intel/bin/sitecode)
     export EC_SITE
 fi
 

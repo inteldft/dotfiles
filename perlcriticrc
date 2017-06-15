@@ -21,7 +21,7 @@ allowed_values = 0 1 -1 2 65535
 allowed_types = Hex Binary
 
 [Variables::ProhibitPunctuationVars]
-allow = $0 $!
+allow = $0 $! ${^CHILD_ERROR_NATIVE}
 
 [Variables::RequireLocalizedPunctuationVars]
 allow = %ENV
@@ -56,3 +56,7 @@ script_sections = NAME | USAGE    | DESCRIPTION | AUTHOR | LICENSE AND COPYRIGHT
 [-RegularExpressions::RequireLineBoundaryMatching]
 
 [-ValuesAndExpressions::ProhibitEmptyQuotes]
+
+[-Miscellanea::ProhibitTies]
+
+[-BuiltinFunctions::ProhibitStringyEval]

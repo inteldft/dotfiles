@@ -1,0 +1,233 @@
+#!/usr/intel/pkgs/perl/5.14.1/bin/perl
+#------------------------------------------------------------------------------
+#  FILE:  diskhogs
+#
+#  DESCRIPTION:
+#    Script to find out who is using up disk space
+#
+#  CREATED BY:  Greg McGrath, Intel Corporation
+#
+#  UPDATED BY:  Troy Hinckley, troy.j.hinckley@intel.com
+#
+#  Copyright (c) 2017, Intel Corporation
+
+use strict;
+use warnings;
+
+use Cwd qw{ cwd abs_path };
+use File::Basename qw{ basename };
+use Const::Fast;
+use Data::Dumper;
+
+$Data::Dumper::Indent = 1;
+
+local $SIG{__DIE__}  = sub {die  "ERROR: @_"  }; ## no critic (ErrorHandling::RequireCarping)
+local $SIG{__WARN__} = sub {warn "WARNING: @_"}; ## no critic (ErrorHandling::RequireCarping)
+
+const my $PROGRAM_BASENAME => basename($0);
+
+my %options = ();
+
+process_args();
+report();
+exit 0;
+
+#------------------------------------------------------------------------------
+# Generate the diskhogs report
+sub report {
+    my @disks = (@ARGV == 0) ?
+        get_disk(cwd()) : # if no disk given operate on the cwd
+        map { get_disk($_) } @ARGV;
+
+    my %totals;
+    foreach my $disk (@disks) {
+        $totals{$disk} = {report_disk_usage($disk)};
+    }
+
+    if (@disks > 1) {
+        # Get sum of disk sizes
+        my $total_disk_size = 0;
+        my %user_usage;
+        foreach my $disk (keys %totals) {
+            (my $size = $totals{$disk}{size}) =~ s/(\d+)G/$1/;
+            $total_disk_size += $size;
+            while (my ($user, $usage) = each %{$totals{$disk}{users}}) {
+                $user_usage{$user} += $usage;
+            }
+        }
+
+        print_usage_table("TOTALS: Size=${total_disk_size}G", %user_usage);
+    }
+    return;
+}
+
+#------------------------------------------------------------------------------
+# Report disk usage for disk X and return info
+sub report_disk_usage {
+    my ($disk) = @_;
+    my %disk_stats = get_disk_stats($disk);
+    my %disk_info = %disk_stats;
+    my %usage = get_disk_usage($disk);
+    $disk_info{users} = \%usage;
+
+    my $description = "DISK $disk:\n"
+    . "Size      = $disk_stats{size}\n"
+    . "Available = $disk_stats{avail}\n"
+    . "Used      = $disk_stats{use_pct}";
+
+    print_usage_table($description, %usage);
+    return %disk_info;
+}
+
+#------------------------------------------------------------------------------
+# Extract disk statistics from the system
+sub get_disk_stats {
+    my ($disk) = @_;
+
+    my $cmd = "df -h $disk";
+    print "Command: $cmd\n" if $options{debug};
+    my @output = `$cmd`;
+    if (${^CHILD_ERROR_NATIVE}) {
+        die "failed on system command: $cmd\n";
+    }
+
+    # output example
+    # Filesystem      Size Used Avail Use% Mounted on
+    # scfs-05:/axx_47 1.1T 929G 112G  90%  /nfs/fc/disks/dnv.emu.006
+    my (undef, $size, $used, $avail, $use_pct) = split /\s+/, $output[1];
+    foreach ($size, $used, $avail) {
+        if ($_ =~ /([0-9.]+)T/) {
+            const my $GB_PER_TB => 1000;
+            $_ = ($1 * $GB_PER_TB) . 'G';
+        }
+    }
+
+    return  (
+        size    => $size,
+        used    => $used,
+        avail   => $avail,
+        use_pct => $use_pct,
+    );
+}
+
+#------------------------------------------------------------------------------
+# Extract disk usage by user from the system
+sub get_disk_usage {
+    my ($disk) = @_;
+
+    const my $STODSTATUS_CMD => q{/usr/intel/bin/stodstatus storage-users --fields User,Usage --sort-by Usage "Path='%s'"};
+    my $cmd = sprintf $STODSTATUS_CMD, $disk;
+    print "Command: $cmd\n" if $options{debug};
+    my @output = `$cmd`;
+    if (${^CHILD_ERROR_NATIVE}) {
+        die "failed on system command: $cmd\n";
+    }
+
+    my %usage;
+    foreach my $line (@output) {
+        if ($line =~ /^([^\s]+)\s+(\d+)/) {
+            my ($user, $usage) = ($1, $2);
+            if ($usage > 0) {
+                $usage{$user} = $usage;
+            }
+        }
+    }
+    return %usage;
+}
+
+#------------------------------------------------------------------------------
+# extract command line arguments into the %options hash
+sub process_args {
+
+    use Getopt::Long;
+
+    GetOptions(
+        \%options,
+        'all_users|all|a',
+        'debug',
+        'help|h|?',
+    ) or die "Invalid arguments\n";
+
+    if ($options{help}) {
+        usage();
+    }
+
+    return;
+}
+
+#------------------------------------------------------------------------------
+# Print usage information for this utility
+sub usage {
+    my $usage = <<"_END_USAGE_";
+
+NAME: $0
+
+SYNOPSIS:
+   $PROGRAM_BASENAME {options} {disk_directory ...}
+
+DESCRIPTION:
+   This script is used to report information on disk usage.
+
+OPTIONS:
+   -all
+         Show each user with storage on the disk, regardless of their usage size
+   -debug
+         To turn on various debug prints
+   -help
+         Print this usage information
+
+_END_USAGE_
+
+    print $usage;
+    exit 0;
+}
+
+#------------------------------------------------------------------------------
+# get the disk that path is member of
+sub get_disk {
+    my ($path) = @_;
+    unless (-e $path) {
+        die "$path is not a resolvable path\n";
+    }
+    if (abs_path($path) =~ m{(/nfs/[a-z]+/disks/[^/]+)}) {
+        return $1;
+    } else {
+        die "path $path is not part of an Intel managed disk\n";
+    }
+}
+
+#------------------------------------------------------------------------------
+# print the usage for a set of users
+sub print_usage_table {
+    my ($description, %users) = @_;
+    const my @OUTPUT_COLUMNS => ('User', 'GB Used', '% Use');
+    const my $OUTPUT_FORMAT => "| %9.9s | %7.7s | %5.5s |\n";
+    const my $HEADER => sprintf $OUTPUT_FORMAT, @OUTPUT_COLUMNS;
+    const my $SEPARATOR => (q{-} x ((length $HEADER) - 1)) . "\n";
+    const my $MAX_DISPLAY_PCT => 80;
+    const my $PCT_MULTIPLIER => 100;
+
+    print "\n";
+    print $SEPARATOR;
+    print "$description\n";
+    print $SEPARATOR;
+    print $HEADER;
+    print $SEPARATOR;
+    my $total_pct = 0;
+    my $total_size = 0;
+    $total_size += $_ for values %users;
+    foreach my $user (reverse sort { $users{$a} <=> $users{$b} } keys %users) {
+        my $usage = $users{$user};
+        const my $MB_PER_GB => 1000;
+        my $usage_gb = sprintf '%.0f', $usage / $MB_PER_GB;
+        my $percent = sprintf '%.1f', ($usage / $total_size) * $PCT_MULTIPLIER;
+
+        printf($OUTPUT_FORMAT, $user, $usage_gb, $percent);
+        $total_pct += $percent;
+        if (not $options{all_users}) {
+            last if ($total_pct >= $MAX_DISPLAY_PCT);
+        }
+    }
+    print $SEPARATOR;
+    return;
+}
