@@ -1,7 +1,7 @@
 #!/usr/intel/bin/bash
 
 # print out the size of all files/directories in the specified directory and sort them by size
-dsize () {
+dir-size () {
     du -a -h --max-depth=1 "${1-.}" | sort -h
 }
 
