@@ -82,6 +82,7 @@ if [ "$(type -t pathmunge 2>/dev/null)" == 'function' ];then
 fi
 
 complete -F _fzf_path_completion -o default -o bashdefault e # add fzf completion to emacs
+complete -F _fzf_path_completion -o default -o bashdefault less # add fzf completion to less
 export FZF_TMUX=1 # use tmux pane for fzf popup
 export FZF_COMPLETION_TRIGGER='ff' # use ff as a trigger sequence
 
