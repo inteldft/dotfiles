@@ -12,6 +12,8 @@ severity = 3
 severity = 2
 [ValuesAndExpressions::ProhibitNoisyQuotes]
 severity = 1
+[Variables::ProhibitConditionalDeclarations]
+severity = 3
 
 [InputOutput::RequireCheckedSyscalls]
 exclude_functions = print say close

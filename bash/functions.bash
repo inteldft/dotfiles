@@ -254,7 +254,7 @@ if [ "$EC_SITE" == 'sc' ]; then
             postfix="-1c -dut $1 -1c-";
         fi
 
-        local command="$GK_CONFIG_DIR/hooks/setup_git_config.pl -c $1; nbjob run --target ${EC_SITE}_critical --qslot $NBQSLOT --mail E bman -dut $1 -mc $2 $stages $postfix"
+        local command="$GK_CONFIG_DIR/hooks/setup_git_config.pl -c $1; nbjob run --target ${EC_SITE}_critical --mail E bman -dut $1 -mc $2 $stages $postfix"
         echo "$command"
         eval "$command"
     }
@@ -290,7 +290,7 @@ if [ "$EC_SITE" == 'sc' ]; then
             test_dir="-test_results $4"
         fi
 
-        local command="simregress -dut $1 -model $2 -l $3 -trex -save -trex- -net -P ${EC_SITE}_critical -Q $NBQSLOT $test_dir"
+        local command="simregress -dut $1 -model $2 -l $3 -trex -save -trex- -net -P ${EC_SITE}_critical $test_dir"
         echo "$command"
         eval "$command"
     }

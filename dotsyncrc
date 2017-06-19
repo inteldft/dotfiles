@@ -34,6 +34,7 @@ tmux.conf
 toprc
 vimrc_background
 fzf.bash
+fzf
 
 # bin files
 bin/get-root:bin/get-root
