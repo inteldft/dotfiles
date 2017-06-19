@@ -44,47 +44,6 @@ mdcd () {
     cd "$1" || return
 }
 
-# give me a clean path with nothing mixed up
-clean-path () {
-    export PATH='/usr/intel/pkgs/bash/4.1/bin:' \
-'/usr/intel/pkgs/emacs/25.1/bin:' \
-'/usr/intel/pkgs/less/418.1-64/bin:' \
-'/usr/intel/pkgs/perl/5.14.1-threads/bin:' \
-'/nfs/site/home/tjhinckl/.autojump/bin:' \
-'/nfs/site/home/tjhinckl/bin:' \
-'/usr/intel/bin:' \
-'/usr/bin:' \
-'/bin:' \
-'/usr/bin/X11:' \
-'/usr/X11R6/bin:' \
-'/opt/kde3/bin:' \
-'/usr/lib64/jvm/jre/bin:' \
-'/usr/lib/mit/bin:' \
-'/usr/lib/mit/sbin:' \
-'/usr/lib/qt3/bin:' \
-'/usr/sbin:' \
-'.'
-}
-
-# set up the path that I would have after I sourced the development enviroment
-dev-path () {
-    clean-path
-    if [ "$EC_SITE" == 'sc' ]; then
-        pathmunge /p/hdk/rtl/proj_dbin/shdk74
-        pathmunge /p/hdk/rtl/bin
-        pathmunge /p/hdk/rtl/proj_tools/proj_binx/shdk74/latest
-        pathmunge /p/hdk/rtl/valid/bin after
-    elif [ "$EC_SITE" == 'fc' ]; then
-        pathmunge /p/hdk/rtl/proj_tools/proj_binx/shdk73/latest
-        pathmunge /usr/local/bin after
-        pathmunge /p/hdk/rtl/proj_dbin/shdk73 after
-    fi
-    PATH=${PATH//:\.//} #remove cwd from the path and append it to the end (safer)
-    # PATH=`echo $PATH | sed -e 's/:\.//'`
-    pathmunge . after
-    export PATH
-}
-
 sync-site () {
     if [[ -z ${1+x} ]]; then
         echo "need to specify a directory"
@@ -128,11 +87,6 @@ srcspf () {
 
     export SPF_ROOT
     csrc "$SPF_ROOT"/bin/spf_setup_env
-
-    # export SPF_ROOT=/p/hdk/cad/spf/latest
-    # cmp --silent "$SPF_ROOT"/bin/spf_setup_env "$HOME"/temp/spf_env/spf_setup_env ||
-    #     echo "spf_setup_env has changed. ABORT"
-    # spf_setup_env_bash
 }
 
 # set the vars required to run ESPF on Chassis
@@ -178,13 +132,25 @@ if [ "$EC_SITE" == 'sc' ]; then
         srcspf
 
     }
+
+    _setdftvars () {
+        canidates=()
+        for m in $MODEL_ROOT/tools/ipgen/*; do
+            [ -d "$m" ] && canidates+=(${m##*/})
+        done
+        local cur=${COMP_WORDS[COMP_CWORD]}
+        # shellcheck disable=SC2116
+        COMPREPLY=( $(compgen -W "$(echo "${canidates[@]}")" -- "$cur") )
+    }
+
+    complete -F _setdftvars setdftvars
+
 else
     setdftvars () {
         if [[ -z ${RTL_PROJ_LIB+x} ]]; then
             echo "Error: need to source dev enviroment first (srcenv)"
             return
         fi
-
 
         export STF_SPFSPEC=$MODEL_ROOT/verif/tests/JTAG_BFM_CTT_files/spf/dnv.stf.spfspec
         export TAP_SPFSPEC=$MODEL_ROOT/verif/tests/JTAG_BFM_CTT_files/spf/dnv.tap.spfspec
@@ -270,11 +236,11 @@ if [ "$EC_SITE" == 'sc' ]; then
             return
         fi
 
-        # "$RTL_PROJ_BIN"/rtldebug.bman -dut "$1" -m "$2" -ssf "$3"
-        "$HOME"/custom/rtldebug.custom -dut "$1" -m "$2" -ssf "$3" -ver "$MODEL_ROOT"
+        verdiwaves -dut "$1" -m "$2" -f "$3"
     }
 
     reg () {
+
         if [[ $# -lt 3 ]]; then
             echo "Error: must specify dut, model, and list to run regressions"
             return
@@ -282,6 +248,11 @@ if [ "$EC_SITE" == 'sc' ]; then
 
         if [[ -z ${RTL_PROJ_BIN+x} ]]; then
             echo "Error: need to source dev enviroment first (srcenv)"
+            return
+        fi
+
+        if [ ! -w "$MODEL_ROOT" ] && [[ $# -lt 4 ]]; then
+            echo "Error: must specify result directory when running on remote models"
             return
         fi
 
@@ -305,3 +276,5 @@ elif [ "$EC_SITE" == 'fc' ]; then
         acesh -dut dnv "dve -vpd $PWD/soc_tb.vpd"
     }
 fi
+
+

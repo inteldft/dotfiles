@@ -1,0 +1,80 @@
+#!/usr/intel/pkgs/perl/5.14.1/bin/perl
+#
+# Maintained by Hinckley, Troy -- troy.j.hinckley@intel.com
+#
+########################################################################
+# verdiwaves
+#   launch verdi without the power aware option for faster launch times
+########################################################################
+
+use warnings;
+use strict;
+
+use Getopt::Long qw(:config pass_through);
+
+my $debug = 0;
+my ($dut, $model, $ver);
+my $power_opt = 0;
+my $help = 0;
+my $fsdb = q{};
+
+GetOptions (
+    'd|dut=s'   => \$dut,
+    'm|model=s' => \$model,
+    'v|ver=s'   => \$ver,
+    'f|fsdb=s'  => \$fsdb,
+    'p|power'   => \$power_opt,
+
+    'h|help'    => \$help,
+    'debug'     => \$debug,
+);
+
+print "\nPassing on the following unkown options to verdi: '@ARGV'\n" if ($debug);
+
+if ($help) {
+    help();
+    exit 0;
+}
+
+die "\nERROR: no DUT given (use -dut)\n" unless ($dut);
+die "\nERROR: no model given (use -model)\n" unless ($model);
+
+my $power_str = ($power_opt) ? q{} : '-lps_off';
+my $fsdb_str = ($fsdb) ? "-ssf $fsdb" : q{};
+
+my $model_root = do {
+    if ($ver) {
+        if (-e $ver) {
+            $ver;
+        } else {
+            die "\nERROR: '-ver $ver' does not exist. \n"
+        }
+    } elsif (exists $ENV{MODEL_ROOT}) {
+        $ENV{MODEL_ROOT};
+    } else {
+        die "\nERROR: \$MODEL_ROOT not set \n"
+    }
+};
+
+my $license_file = `getLf novas`;
+my $vcs_home   = `ToolConfig.pl -ver $model_root get_tool_path vcs`;
+my $verdi_path = `ToolConfig.pl -ver $model_root get_tool_path verdi`;
+chomp ($license_file, $vcs_home, $verdi_path);
+
+my $command = "$verdi_path/bin/verdi -ssy -nologo -simBin $model_root/target/$dut/vcs_4value/$model/$model.simv -simflow $power_str $fsdb_str @ARGV";
+
+if ($debug) {
+    print "licesnse_file_s: $license_file\n";
+    print "vcs_home_s: $vcs_home\n";
+}
+
+local $ENV{LM_LICENSE_FILE}=$license_file;
+local $ENV{VCS_HOME}=$vcs_home;
+print "\n$command\n";
+system "$command";
+
+sub help {
+    print "\nUsage:\n";
+    print "verdiwaves [-d <dut> -m <model> -v <model_root> -f <fsdb> -power ]\n";
+    return;
+}

@@ -6,7 +6,8 @@
         smartparens
         highlight-numbers
         flycheck
-        ;; (perl-completion :toggle (configuration-layer/package-usedp 'auto-complete))
+        (perl-completion :toggle (configuration-layer/package-usedp 'auto-complete))
+        (anything :toggle (configuration-layer/package-usedp 'perl-completion))
         ;; (plsense :toggle (configuration-layer/package-usedp 'auto-complete))
         ))
 
@@ -151,20 +152,22 @@
      'perl-mode "\\_<[[:digit:]].*?\\_>\\|'\\(?:h[[:xdigit:]]*?\\|b[01]*?\\|o[0-7]*?\\|d[[:digit:]]*?\\)\\_>"
      highlight-numbers-modelist)))
 
-;; (defun perl/init-perl-completion ()
-;;   (use-package perl-completion
-;;     :defer t
-;;     :config
-;;     (progn
-;;       (setq plcmp-default-lighter  "")
-;;       (add-hook
-;;        'cperl-mode-hook
-;;        (lambda ()
-;;          (auto-complete-mode t)
-;;          (perl-completion-mode t)
-;;          (make-variable-buffer-local 'ac-sources)
-;;          (setq ac-sources
-;;                '(ac-source-perl-completion)))))))
+(defun perl/init-anything ()
+  (use-package anything))
+
+(defun perl/init-perl-completion ()
+  (use-package perl-completion
+    :config
+    (progn
+      (setq plcmp-default-lighter  "")
+      (add-hook
+       'cperl-mode-hook
+       (lambda ()
+         (auto-complete-mode t)
+         (perl-completion-mode t)
+         (make-variable-buffer-local 'ac-sources)
+         (setq ac-sources
+               '(ac-source-perl-completion)))))))
 
 ;; (defun perl/init-plsense ()
 ;;   (use-package plsense
