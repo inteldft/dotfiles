@@ -2,7 +2,7 @@
 
 # print out the size of all files/directories in the specified directory and sort them by size
 dir-size () {
-    du -a -h --max-depth=1 "${1-.}" | sort -h
+    du -a -h --max-depth=1 "${1:-.}" | sort -h
 }
 
 man() {
@@ -15,28 +15,34 @@ csrc() {
 }
 
 count() {
-    find "${1-.}" -maxdepth 1 -type f | wc -l
+    find "${1:-.}" -maxdepth 1 -type f | wc -l
 }
 
 rename() {
-    if [[ -z ${1+x} ]]; then
+    if [[ ! $1 ]]; then
         echo "USAGE: rename <perl substitution regex>"
         return
     fi
+
+    if [[ ! $1 =~ s/.+/.*/.* ]]; then
+        echo "ERROR: regex must be of the form 's/<pattern>/<replacement>/<flags>'"
+        return
+    fi
+
     perl -we "for (glob '*') { (my \$name = \$_) =~ $1; rename(\$_, \$name) if (\$name ne \$_); }"
 }
 
 rm-old () {
-    if [[ -z ${1+x} ]]; then
+    if [[ ! $1 ]]; then
         echo "USAGE: rm-old <number of days to keep> <optional directory>"
         return
     fi
     echo "Removing files older than $1 day(s) in ${2-cwd}"
-    find "${2-.}" -ctime +"$1" -exec rm -rf {} +
+    find "${2:-.}" -ctime +"$1" -exec rm -rf {} +
 }
 
 mdcd () {
-    if [[ -z ${1+x} ]]; then
+    if [[ ! $1 ]]; then
         echo "must specify a directory"
         return
     fi
@@ -45,14 +51,14 @@ mdcd () {
 }
 
 sync-site () {
-    if [[ -z ${1+x} ]]; then
+    if [[ ! $1 ]]; then
         echo "need to specify a directory"
         return
     fi
 
-    if [ "$EC_SITE" == 'sc' ]; then
+    if [[ $EC_SITE == 'sc' ]]; then
         remote_host='fcab1249.fc'
-    elif [ "$EC_SITE" == 'fc' ]; then
+    elif [[ $EC_SITE == 'fc' ]]; then
         remote_host='scci19347.sc'
     else
         echo "remote host unresolved"
@@ -64,34 +70,25 @@ sync-site () {
     eval "$cmd"
 }
 
-exith () {
-    history | awk -F ' ' '{$1=""; print $0}' >> ~/doc/history.log && exit
-}
-
-save_history () {
-    history | awk -F ' ' '{$1=""; print $0}' >> ~/doc/history.log
-}
-
 # tell me which version of an intel IP I am using
 whichip () {
     ToolConfig.pl get_tool_path "$1"
 }
 
-# shellcheck disable=SC2120
 srcspf () {
-    if [[ "$1" == 'latest' ]]; then
+    if [[ $1 == 'latest' ]] || [[ ! -d $MODEL_ROOT ]]; then
         SPF_ROOT=/p/hdk/cad/spf/latest
     else
         SPF_ROOT=$(whichip espf)
     fi
 
     export SPF_ROOT
-    csrc "$SPF_ROOT"/bin/spf_setup_env
+    csrc -noalias -ignore_msg setenv "$SPF_ROOT"/bin/spf_setup_env
 }
 
 # set the vars required to run ESPF on Chassis
 setchassisvars () {
-    if [[ -z ${1+x} ]]; then
+    if [[ ! $1 ]]; then
         echo "Error: Need to provide a version to set chassis variables"
         return
     fi
@@ -104,14 +101,14 @@ setchassisvars () {
 }
 
 # set the vars required to run ESPF on a SS
-if [ "$EC_SITE" == 'sc' ]; then
+if [[ $EC_SITE == 'sc' ]]; then
     setdftvars () {
-        if [[ -z ${1+x} ]]; then
+        if [[ ! $1 ]]; then
             echo "Error: Need to provide a model to set dft variables"
             return
         fi
 
-        if [[ -z ${RTL_PROJ_LIB+x} ]]; then
+        if [[ ! $RTL_PROJ_LIB ]]; then
             echo "Error: need to source dev enviroment first (srcenv)"
             return
         fi
@@ -125,29 +122,27 @@ if [ "$EC_SITE" == 'sc' ]; then
         export DFT_GLOBAL_DIR=${DFT_GLOBAL_DIR-${HOME}/workspace/chassis_dft_val_global}
         XWEAVE_REPO_ROOT=$(whichip ipconfig/xweave)
         export XWEAVE_REPO_ROOT
-        if [[ ! -z ${LD_LIBRARY_PATH+x} ]];  then
+        if [[ $LD_LIBRARY_PATH ]];  then
             unset LD_LIBRARY_PATH
         fi
-        # shellcheck disable=SC2119
         srcspf
 
     }
 
     _setdftvars () {
-        canidates=()
-        for m in $MODEL_ROOT/tools/ipgen/*; do
-            [ -d "$m" ] && canidates+=(${m##*/})
-        done
+        shopt -s nullglob
+        canidates=($MODEL_ROOT/tools/ipgen/*/)
+        canidates=("${canidates[@]%/}")
         local cur=${COMP_WORDS[COMP_CWORD]}
         # shellcheck disable=SC2116
-        COMPREPLY=( $(compgen -W "$(echo "${canidates[@]}")" -- "$cur") )
+        COMPREPLY=( $(compgen -W "$(echo "${canidates[@]##*/}")" -- "$cur") )
     }
 
     complete -F _setdftvars setdftvars
 
 else
     setdftvars () {
-        if [[ -z ${RTL_PROJ_LIB+x} ]]; then
+        if [[ ! $RTL_PROJ_LIB ]]; then
             echo "Error: need to source dev enviroment first (srcenv)"
             return
         fi
@@ -161,7 +156,6 @@ else
         export DFT_GLOBAL_DIR=${DFT_GLOBAL_DIR-${HOME}/workspace/chassis_dft_val_global}
 
         unset LD_LIBRARY_PATH
-        # shellcheck disable=SC2119
         srcspf latest
     }
 
@@ -172,51 +166,53 @@ nbexit () {
     nbstatus --tar linux1 constants --fo csv numericvalue=="$1"
 }
 
-if [ "$EC_SITE" == 'sc' ]; then
+if [[ $EC_SITE == 'sc' ]]; then
     build-local () {
-        if [[ $# -lt 2 ]]; then
+        if (( $# < 2 )); then
             echo "Error: must specify dut and mc to build"
             return
         fi
 
-        if [[ -z ${RTL_PROJ_LIB+x} ]]; then
+        if [[ ! $RTL_PROJ_LIB ]]; then
             echo "Error: need to source dev enviroment first (srcenv)"
             return
         fi
 
         local stages=""
-        if [[ ! -z ${3+x} ]]; then
+        if [[ $3 ]]; then
             stages="-s all +s $3"
         fi
 
         local postfix=""
-        if [[ $3 == sgdft ]] || [[ $3 == sglp ]]; then
+        shopt -s extglob
+        if [[ $3 == @(sgdft|sglp) ]]; then
             postfix="-1c -dut $1 -1c-";
         fi
 
-        local command="bman -dut $1 -mc $2 $stages $postfix"
+        command="bman -dut $1 -mc $2 $stages $postfix"
         echo "$command"
         eval "$command"
     }
 
     build () {
-        if [[ $# -lt 2 ]]; then
+        if (( $# < 2 )); then
             echo "Error: must specify dut and mc to build"
             return
         fi
 
-        if [[ -z ${RTL_PROJ_LIB+x} ]]; then
+        if [[ ! $RTL_PROJ_LIB ]]; then
             echo "Error: need to source dev enviroment first (srcenv)"
             return
         fi
 
         local stages=""
-        if [[ ! -z ${3+x} ]]; then
+        if [[ $3 ]]; then
             stages="-s all +s $3"
         fi
 
         local postfix=""
-        if [[ $3 == sgdft ]] || [[ $3 == sglp ]]; then
+        shopt -s extglob
+        if [[ $3 == @(sgdft|sglp) ]]; then
             postfix="-1c -dut $1 -1c-";
         fi
 
@@ -226,38 +222,38 @@ if [ "$EC_SITE" == 'sc' ]; then
     }
 
     waves () {
-        if [[ $# -ne 3 ]]; then
+        if (( $# < 3 )); then
             echo "Error: must specify dut, model, and fsdb file to pull up waves"
             return
         fi
 
-        if [[ -z ${RTL_PROJ_BIN+x} ]]; then
+        if [[ ! $RTL_PROJ_BIN ]]; then
             echo "Error: need to source dev enviroment first (srcenv)"
             return
         fi
 
-        verdiwaves -dut "$1" -m "$2" -f "$3"
+        verdiwaves -dut "$1" -m "$2" -f "$3" "${@:4}"
     }
 
     reg () {
 
-        if [[ $# -lt 3 ]]; then
+        if (( $# < 3 )); then
             echo "Error: must specify dut, model, and list to run regressions"
             return
         fi
 
-        if [[ -z ${RTL_PROJ_BIN+x} ]]; then
+        if [[ ! $RTL_PROJ_BIN ]]; then
             echo "Error: need to source dev enviroment first (srcenv)"
             return
         fi
 
-        if [ ! -w "$MODEL_ROOT" ] && [[ $# -lt 4 ]]; then
+        if [[ ! -w $MODEL_ROOT ]] && (( $# < 4 )); then
             echo "Error: must specify result directory when running on remote models"
             return
         fi
 
         local test_dir=""
-        if [[ ! -z ${4+x} ]]; then
+        if [[ $4 ]]; then
             test_dir="-test_results $4"
         fi
 
@@ -266,7 +262,7 @@ if [ "$EC_SITE" == 'sc' ]; then
         eval "$command"
     }
 
-elif [ "$EC_SITE" == 'fc' ]; then
+elif [[ $EC_SITE == 'fc' ]]; then
 
     build () {
         nbqe simbuild -ace "-c -model $1 -elab_debug_pp"

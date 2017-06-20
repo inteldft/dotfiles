@@ -46,6 +46,7 @@ bin/fasd:bin/fasd
 bin/fzf:bin/fzf
 bin/fzf-tmux:bin/fzf-tmux
 bin/diskhogs:bin/diskhogs
+bin/verdiwaves:bin/verdiwaves
 pygments/pygmentize:bin/pygmentize
 
 # directories

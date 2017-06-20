@@ -1,13 +1,13 @@
 #!/usr/intel/bin/bash
 
-if [ -z "$EC_SITE" ]; then
+if [[ ! $EC_SITE ]]; then
     EC_SITE=$(/usr/intel/bin/sitecode)
     export EC_SITE
 fi
 
 export LC_ALL=en_US.UTF-8 # use UTF-8 character encoding
 export ALL_PROXY="http://proxy.${EC_SITE}.intel.com:911" # proxy for anything
-export HTTP_PROXY="http://proxy.${EC_SITE}.intel.com:911" # proxy for http
+export HTTP_PROXY=ALL_PROXY # proxy for http
 export GCONFTOOL=gconftool-2 # required to configure the theme of Gnome
 export VERILATOR_ROOT=/nfs/site/home/tjhinckl/personal/verilator-3.884 # used to build verilator models
 export EDITOR=vim # editor for commit messages and command edits
@@ -17,7 +17,7 @@ export PDX_HOSTNAME=plxd3507.pdx.intel.com
 export MANPATH=$HOME/.local/share/man:$MANPATH
 export PROMPT_DIRTRIM=5
 
-if [ "$EC_SITE" == 'sc' ]; then
+if [[ $EC_SITE == 'sc' ]]; then
     export DSHOST=sccj002253.sc.intel.com
 else
     export DSHOST=fcab1221.fc.intel.com
@@ -29,12 +29,14 @@ if [[ -z ${PS1+x} ]]; then
 fi
 
 shopt -s extglob # use extended globs
+shopt -s cmdhist # save multiline commands as one command
 shopt -s autocd # change directories without cd command
 shopt -s cdspell # fix cd spelling errors
 shopt -s checkwinsize # updated LINES and COLUMNS
 shopt -s dirspell # check directory names for errors
 shopt -s globstar # use ** to glob recursivley
 shopt -s histverify # let me edit history substution commands before I run them
+shopt -s no_empty_cmd_completion # don't attempt completion on empty commands
 
 # Path to the bash it configuration
 export BASH_IT="$HOME/.bash-it"
@@ -44,22 +46,12 @@ export BASH_IT_CUSTOM="$HOME/.bash"
 # location /.bash_it/themes/
 export BASH_IT_THEME='troy'
 
-# Don't check mail when opening terminal.
-unset MAILCHECK
-
-# Change this to your console based IRC client of choice.
-export IRC_CLIENT='irssi'
-
-# Set this to the command you use for todo.txt-cli
-export TODO="t"
-
 # Set this to false to turn off version control status checking within the prompt for all themes
 export SCM_CHECK=false
 
 # (Advanced): Uncomment this to make Bash-it reload itself automatically
 # after enabling or disabling aliases, plugins, and completions.
 # export BASH_IT_AUTOMATIC_RELOAD_AFTER_CONFIG_CHANGE=1
-
 
 #
 # GNU Readline options
@@ -77,7 +69,7 @@ bind "set bell-style visible" # don't 'ding' when ringing the bell
 # shellcheck source=/nfs/site/home/tjhinckl/.bash-it/bash_it.sh
 [[ -s $BASH_IT/bash_it.sh ]] && source $BASH_IT/bash_it.sh
 
-if [ "$(type -t pathmunge 2>/dev/null)" == 'function' ];then
+if [[ $(type -t pathmunge 2>/dev/null) == 'function' ]];then
     pathmunge "$HOME"/bin
 fi
 
@@ -92,13 +84,13 @@ export FZF_COMPLETION_TRIGGER='ff' # use ff as a trigger sequence
 if [[ -n $TMUX_PANE ]]; then
     HISTFILE=~/.tmux/bash_history/bash_history.$(tmux display-message -p '#S').$TMUX_PANE
     export HISTFILE
-    if [ ! -f "$HISTFILE" ]; then
-        if [ -f ~/temp/tmux_restore_running ]; then
+    if [[ ! -f $HISTFILE ]]; then
+        if [[ -f ~/temp/tmux_restore_running ]]; then
 		    pane_index=$(tmux display -pt "${TMUX_PANE}" '#{pane_index}')
 		    window_number=$(tmux display -pt "${TMUX_PANE}" '#{window_index}')
 		    session_name=$(tmux display -pt "${TMUX_PANE}" '#{session_name}')
             restore_file=~/.tmux/resurrect/bash_history-"$session_name:$window_number.$pane_index"
-            if [ -f "$restore_file" ]; then
+            if [[ -f $restore_file ]]; then
 		        cp "$restore_file" "$HISTFILE"
             fi
         fi
@@ -117,14 +109,14 @@ fi
 
 
 BASE16_SHELL=$HOME/.config/base16-shell/
-[ ! -n "$SSH_CLIENT" ] && [ ! -n "$SSH_TTY" ] && [ -n "$PS1" ] && [ -s "$BASE16_SHELL"/profile_helper.sh ] &&
+[[ -z $SSH_CLIENT ]] && [[ -z $SSH_TTY ]] && [[ -n $PS1 ]] && [[ -s $BASE16_SHELL/profile_helper.sh ]] &&
     eval "$("$BASE16_SHELL"/profile_helper.sh)"
 
-[[ -s /nfs/site/home/tjhinckl/.autojump/etc/profile.d/autojump.sh ]] &&
-    source /nfs/site/home/tjhinckl/.autojump/etc/profile.d/autojump.sh
+# shellcheck source=/nfs/site/home/tjhinckl/.autojump/etc/profile.d/autojump.sh
+[[ -s ~/.autojump/etc/profile.d/autojump.sh ]] && source ~/.autojump/etc/profile.d/autojump.sh
 
-[[ -s /nfs/site/home/tjhinckl/personal/github/history/history.sh ]] &&
-    source /nfs/site/home/tjhinckl/personal/github/history/history.sh
+# shellcheck source=/nfs/site/home/tjhinckl/.dotfiles/history/history.sh
+[[ -s $HOME/.dotfiles/history/history.sh ]] && source ~/.dotfiles/history/history.sh
 
 precmd() {
     echo -en "\a"
@@ -141,7 +133,7 @@ precmd() {
 
 export HH_CONFIG=hicolor,keywords # use more colors and search by keywords
 # if this is interactive shell, then bind hh to Ctrl-r
-if [[ $- =~ .*i.* ]]; then bind '"\C-r": "\C-a hh -- \C-j"'; fi
+[[ $- =~ .*i.* ]] && bind '"\C-r": "\C-a hh -- \C-j"'
 
 export HISTCONTROL=ignoredups:$HISTCONTROL
 

@@ -8,12 +8,11 @@
 ########################################################################
 
 use File::Basename;
-use Getopt::Long qw(:config pass_through permute);
 use strict;
 use warnings;
 use Const::Fast;
 use English qw(-no_match_vars);    # avoid regex penalties
-use List::MoreUtils qw(any);
+use List::MoreUtils qw(any uniq);
 use IPC::Open3;
 use feature qw(say);
 use Term::ANSIColor qw(:constants);
@@ -29,10 +28,8 @@ my %new_func     = ();
 my %new_env      = ();
 my %changed_vars = ();
 my %old_alias    = ();
-const my $BASH_SRCENV =>    # how to src dev enviroment with bash
-  '/p/hdk/rtl/cad/x86-64_linux26/intel/Modules/3.2.10.2/init/bash;'
-  . ' module load lv_cfg;'
-  . ' unset module';
+
+my $first_run = 1; # only print output for first run
 
 #*****************************************************************************
 # Main
@@ -53,22 +50,23 @@ if ($opt{alias}) {
     process_aliases() unless ($opt{diff});
 }
 
+# show diff
 if ($opt{diff}) {
     show_diff(\%changed_vars);
-    exit(0);
+    exit 0;
 }
 
 if (not $opt{inline}) {
     start_new_shell();    #method will never return
 }
 
-exit(0);
+exit 0;
 
 ######################################################
 ## Subroutines
 #####################################################
 
-# Source the provided command(s) in csh and extract env vars and aliases
+# Source the provided command in csh and extract env vars and aliases
 sub extract_script_changes {
     my $display_cmd     = shift;
     my $extract_func    = shift;
@@ -87,11 +85,20 @@ sub extract_script_changes {
     my $child_pid = open3($cmd_in, $cmd_out, $cmd_err, $env_cmd);
 
     waitpid($child_pid, 0);
-    print {*STDOUT} <$cmd_out> unless ($opt{diff} or $opt{inline}); # forward output
-    if ($opt{inline} and not $opt{diff}) {
-        print {*STDERR} <$cmd_out>;
+
+    if ($first_run) {
+        if (not $opt{diff}) {
+            my $fh = ($opt{inline}) ? *STDERR : *STDOUT;
+            while (<$cmd_out>) {
+                unless (/$opt{ignore_msg}/) {
+                    print {$fh} $_;
+                }
+            }
+        }
+
+        print {*STDERR} <$cmd_err>; # forward errors
+        $first_run = 0;
     }
-    print {*STDERR} <$cmd_err>;    # forward errors
 
     const my $EXIT_CODE_OFFSET => 8;
     my $env_exit_code = ($CHILD_ERROR >> $EXIT_CODE_OFFSET);
@@ -126,9 +133,7 @@ sub extract_aliases {
         $old_alias{$alias} = $val;
         $val =~ s/setenv\s+(\w+)\s+/export $1=/g; # setenv => export
         $val =~ s/unsetenv/unset/g;               # unsetenv => unset
-        $val =~ s{source /p/hdk/rtl/hdk[.]rc -cfg shdk\d+}/SOURCE_AS_BASH $BASH_SRCENV/g; # developement enviroment sourcing
         $val =~ s/source\s+(.*?)\s*(;|$)/eval \$(csh-source -inline -alias $1)$2/gm; # source tcsh scripts
-        $val =~ s/SOURCE_AS_BASH/source/gi; # make sure only bash sourcing left
         # if alias contains paramters, translate to bash function
         if (
             $val =~ s/![*]/\$\@/g or            # !*   => $@
@@ -139,7 +144,7 @@ sub extract_aliases {
             return;
         }
         $alias =~ s/^-/-- -/; # don't interpret `-` as a flag
-        $val =~ s/'/'\\''/g unless $opt{diff};
+        $val =~ s/'/'\\''/g unless $opt{diff}; # fix up quotes
         $new_alias{$alias} = $val;
     }
     return;
@@ -147,15 +152,16 @@ sub extract_aliases {
 
 # Apply the new env-var settings
 sub process_env_vars {
-    my @all_env_vars = (keys %ENV, keys %new_env);
+    my @all_env_vars = uniq(keys %ENV, keys %new_env);
     no warnings 'qw'; # Avoid perl's warning that I (intentionally) have a '#' in a qw() list
     my @ignore_vars = qw( * @ # ? - $ ! 0 _ PS1 SHLVL OLDPWD COMP_WORDBREAKS );
     for my $var (@all_env_vars) {
-        my $old_val = $ENV{$var};
-        my $new_val = $new_env{$var};
         # don't process "special" variables
         my $pattern = quotemeta $var;
         next if any { /$pattern/ } @ignore_vars;
+
+        my $old_val = $ENV{$var};
+        my $new_val = $new_env{$var};
         apply_env($var, $old_val, $new_val);
     }
     return;
@@ -294,32 +300,33 @@ sub get_source {
 sub get_options {
     my @err_msg;    # Accumulate error messages here.
 
+    use Getopt::Long qw(:config pass_through );
     my %options = (
-        'env'         => 1,
-        'debug'       => 0,
-        'diff'        => 0,
-        'env_shell'   => '/bin/csh',
-        'inline'      => 0,
-        'shell'       => $ENV{SHELL},
-        'shell_args'  => q{},
+        'env'        => 1,
+        'debug'      => 0,
+        'diff'       => 0,
+        'ignore_msg' => q{.^}, # regex matches nothing by default
+        'env_shell'  => '/bin/csh',
+        'inline'     => 0,
+        'shell'      => $ENV{SHELL},
+        'shell_args' => q{},
     );
 
     # run GetOptionsions to process arguments
-    if (GetOptions(
-            '<>'              => \&get_source,
-            'alias!'          => \$options{alias},
-            'env!'            => \$options{env},
-            'debug|d'         => \$options{debug},
-            'diff'            => \$options{diff},
-            'in-line|inline!' => \$options{inline},
-            'env_shell|e=s'   => \$options{env_shell},
-            'groups|g=s'      => \$options{groups},
-            'help|h|?'        => \$options{help},
-            'shell|s=s'       => \$options{shell},
-            'verbose+'        => \$options{verbose},
-        ) == 0) {
-        push @err_msg, "Invalid Arguments\n";
-    }
+    GetOptions(
+        '<>'              => \&get_source,
+        'alias!'          => \$options{alias},
+        'env!'            => \$options{env},
+        'debug|d'         => \$options{debug},
+        'diff'            => \$options{diff},
+        'ignore_msg=s'    => \$options{ignore_msg},
+        'in-line|inline!' => \$options{inline},
+        'env_shell|e=s'   => \$options{env_shell},
+        'groups|g=s'      => \$options{groups},
+        'help|h|?'        => \$options{help},
+        'shell|s=s'       => \$options{shell},
+        'verbose+'        => \$options{verbose},
+    ) or die "\n";
 
     usage(@err_msg) if ($options{help});
 
@@ -328,7 +335,7 @@ sub get_options {
     }
 
     $options{shell_args} = join q{ }, @ARGV;
-    $options{shell_args} =~ s/^\s*\-\-(\s+|$)//; # get rid of '--' which is passed through to @ARGV by pass_through
+    # $options{shell_args} =~ s/^\s*\-\-(\s+|$)//; # get rid of '--' which is passed through to @ARGV by pass_through
     $options{source_args} = join(q{ }, @source_args);
 
     if ($options{debug} and $options{verbose}) {
@@ -361,7 +368,7 @@ sub get_options {
 sub usage {
     my @errors = @_;
     foreach (@errors) {    # For each error,
-        warn "$_\n" if $_ ne q{};    # print it if it's not an empty string.
+        warn "$_\n" if $_ ne q{};    # print if it's not an empty string.
     }
 
     print << "_USAGE_";
@@ -372,6 +379,7 @@ Options:
    -noenv                  Do not gather enviroment variables set by [source file].
    -d|-debug               Enable reporting of debug messages
    -diff                   Report env-var diffs that *would have been applied*; then exit (no new sub-shell)
+   -ignore_msg             regex of output to not print. Useful when you have scripts like spf_setup_env that pointlessly echo everything
    -e|-env_shell <path>    Use this executable instead of /bin/csh to generate the env from source-file
    -g|-groups              Set primary group of new sub-shell to first group here; additional groups are comma seperated
    -h|-help                Show this usage message and then exit
@@ -389,13 +397,13 @@ Usages:
    $script_name -g hdfccpu,coeenv,user [source file]
 
  Update the current shell with aliases and env variables from [source file] (note these are backticks):
-   eval `$script_name -inline [source file]`
+   eval \$($script_name -inline [source file])
 
  Update the current shell with env variables but not aliases from [source file]:
-   eval `$script_name -inline -noalias [source file]`
+   eval \$($script_name -inline -noalias [source file])
 
  Update the current shell with alias but not enviroment variables from [source file]:
-   eval `$script_name -inline -noenv [source file]`
+   eval \$($script_name -inline -noenv [source file])
 
  Create a file that contains the equivelent of the 'sourced' file in bash syntax:
    $script_name -inline [source_file] > file.bash
