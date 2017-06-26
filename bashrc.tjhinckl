@@ -107,7 +107,6 @@ if [[ -n $TMUX_PANE ]]; then
     }
 fi
 
-
 BASE16_SHELL=$HOME/.config/base16-shell/
 [[ -z $SSH_CLIENT ]] && [[ -z $SSH_TTY ]] && [[ -n $PS1 ]] && [[ -s $BASE16_SHELL/profile_helper.sh ]] &&
     eval "$("$BASE16_SHELL"/profile_helper.sh)"

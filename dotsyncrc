@@ -52,11 +52,21 @@ pygments/pygmentize:bin/pygmentize
 # directories
 bash
 bash-it
+emacs.d
 man:.local/share/man
 
 # emacs
-function-setup.el:personal/emacs/local/setup/function-setup.el
-packages.el:.emacs.d/private/perl/packages.el
+
+packages/csh-mode:.emacs.d/private/local/csh-mode
+packages/itpp-mode:.emacs.d/private/local/itpp-mode
+packages/reglist-mode:.emacs.d/private/local/reglist-mode
+packages/sgdc-mode:.emacs.d/private/local/sgdc-mode
+packages/specman-mode:.emacs.d/private/local/specman-mode
+packages/spfspec-mode:.emacs.d/private/local/spfspec-mode
+packages/functions:.emacs.d/private/local/functions
+
+layers/perl:.emacs.d/private/perl
+layers/no-dots:.emacs.d/private/no-dots
 
 [endfiles]
 

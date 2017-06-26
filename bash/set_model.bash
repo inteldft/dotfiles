@@ -3,7 +3,7 @@
 # set the model root to specified IP and version
 # USAGE: set-model [model pattern] <version pattern>
 # example: set-model iio 23a
-set-model () {
+setmodel () {
     export MANUAL_MODEL_ROOT=t
 
     ###########################

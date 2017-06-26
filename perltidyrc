@@ -1,6 +1,8 @@
 # don't change line breaks
 -fnl
+# tightness of barces
+-pt=2
 # maximum line length
--l=130
+# -l=130
 # use variable line length
--vmll
+# -vmll

@@ -333,4 +333,10 @@
   "w8" 'workspace-8
   "w9" 'workspace-9)
 
-(provide 'function-setup)
+(provide 'private-functions)
+
+;; (setq configuration-layer--elpa-archives
+;;       `(("melpa" . ,(expand-file-name "~/personal/emacs/elpa-mirror/spacemacs-elpa-mirror-latest/melpa"))
+;;         ("org"   . ,(expand-file-name "~/personal/emacs/elpa-mirror/spacemacs-elpa-mirror-latest/org"))
+;;         ("gnu"   . ,(expand-file-name "~/personal/emacs/elpa-mirror/spacemacs-elpa-mirror-latest/gnu"))))
+

@@ -13,3 +13,6 @@
 [submodule "pygments"]
 	path = pygments
 	url = sccj002253.sc.intel.com:~/custom/env_bare/pygments
+[submodule "emacs.d"]
+	path = emacs.d
+	url = /nfs/site/home/tjhinckl/custom/env_bare/emacs/

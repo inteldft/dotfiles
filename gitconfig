@@ -16,6 +16,8 @@
 	st = status -uno
 	df = diff -w
 	bl = blame -wM
+    bare = config --bool core.bare true
+    unbare = config --bool core.bare false
 	ssave  = "!f() { git stash save  $*    stash^{/$(git rev-parse --abbrev-ref HEAD)}; }; f"
 	sshow  = "!f() { git stash show  $* -p stash^{/$(git rev-parse --abbrev-ref HEAD)}; }; f"
 	sapply = "!f() { git stash apply $*    stash^{/$(git rev-parse --abbrev-ref HEAD)}; }; f"
