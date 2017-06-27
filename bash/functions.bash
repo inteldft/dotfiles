@@ -257,7 +257,7 @@ if [[ $EC_SITE == 'sc' ]]; then
             test_dir="-test_results $4"
         fi
 
-        local command="simregress -dut $1 -model $2 -l $3 -trex -save -trex- -net -P ${EC_SITE}_critical $test_dir"
+        local command="simregress -dut $1 -model $2 -l $3 -trex -save -trex- -net -P ${EC_SITE}_critical -Q /SDG/sdg74/fe/build/chassis $test_dir"
         echo "$command"
         eval "$command"
     }
