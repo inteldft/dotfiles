@@ -1,8 +1,24 @@
-# don't change line breaks
--fnl
-# tightness of barces
--pt=2
-# maximum line length
-# -l=130
-# use variable line length
-# -vmll
+# pertidy config
+# value after comment is default
+
+# line length
+--maximum-line-length=130      # 80
+
+# indentation
+--indent-columns=4             # 4
+--continuation-indentation=4   # 2
+--closing-token-indentation=0  # 0
+
+#tightness
+--vertical-tightness=0         # 0
+--vertical-tightness-closing=0 # 0
+--paren-tightness=2            # 1
+--brace-tightness=1            # 1
+--square-bracket-tightness=1   # 1
+--block-brace-tightness=0      # 0
+
+#other
+--nospace-for-semicolon          # false
+--nooutdent-long-lines           # false
+--break-at-old-comma-breakpoints # false
+# --variable-maximum-line-length # not supported in our 2009 version of perltidy

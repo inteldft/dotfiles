@@ -22,14 +22,18 @@ setmodel () {
         return
     fi
 
-    shopt -s nullglob
+    local model
 
-    if [[ -d $IP_MODELS/$1 ]]; then
+    if [[ $1 == chassis ]]; then
+        model=$IP_RELEASES/dft_ipgen_chassis
+
+    elif [[ -d $IP_MODELS/$1 ]]; then
         # use arg if resolvable IP name
         model=$IP_MODELS/$1
 
     else
-        options=($IP_MODELS/*${1}*)
+        shopt -s nullglob
+        local options=($IP_MODELS/*${1}*)
 
         if (( ${#options[@]} == 0 )); then
             echo "no models match $1"
@@ -49,16 +53,24 @@ setmodel () {
     # get the version of the IP #
     #############################
 
+    local version
     if [[ ! $2 ]] || [[ $2 == *latest ]]; then
         # if not specified or 'latest' set model to the latest.
         # resolve the link because the latest pointer can change
         version=$(readlink -f "$model"/"${model##*/}"-srvr10nm-latest)
+
+        #TODO find the latest version if there is no latest pointer
+        if [[ ! -d $version ]]; then
+            echo "no latest pointer found"
+            return
+        fi
 
     elif [[ -d $model/$2 ]]; then
         # if version resolvable, set that version
         version=${model}/$2
 
     else
+        local versions
         versions=($model/*${2}*)
 
         if (( ${#versions[@]} == 0 )); then
@@ -71,7 +83,8 @@ setmodel () {
 
         else
             # get the version of the shortest length, which is usually the one you want
-            min=100000
+            local min=100000
+            local shortest_versions
             for ver in "${versions[@]}"; do
                 if (( ${#ver} < min )); then
                     min=${#ver}

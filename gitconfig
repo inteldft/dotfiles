@@ -8,10 +8,10 @@
 	pull = pull --rebase
 	unmerged = diff --name-only --diff-filter=U
 	lc = log origin..HEAD --name-status --no-merges
-	lchanges = log origin..HEAD
+	lchanges = "!csh -c 'git fetch $1 ; if($#argv>0) shift; git log FETCH_HEAD..HEAD $*'"
 	parent = remote show origin
 	rc = log HEAD..origin --name-status --no-merges
-	rchanges = log HEAD..origin
+	rchanges = "!csh -c 'git fetch $1 ; if($#argv>0) shift; git log HEAD..FETCH_HEAD $*'"
 	root = rev-parse --show-toplevel
 	st = status -uno
 	df = diff -w
@@ -22,6 +22,15 @@
 	sshow  = "!f() { git stash show  $* -p stash^{/$(git rev-parse --abbrev-ref HEAD)}; }; f"
 	sapply = "!f() { git stash apply $*    stash^{/$(git rev-parse --abbrev-ref HEAD)}; }; f"
 	sdrop  = "!f() { git stash drop stash@{$1}; }; f"
+	cluster = config --get intel.cluster
+	edit-unmerged = "!f() { git ls-files --unmerged | cut -f2 | sort -u ; }; /usr/intel/bin/emacs `f`"
+	gk = "!sh -c 'gk.pl $1 $2 ' - "
+	ldiffchanges = "!csh -c 'git fetch $1 ; if($#argv>0) shift; git diff FETCH_HEAD..HEAD $*'"
+	lfchanges = "!csh -c 'git fetch $1 ; if($#argv>0) shift; git log --pretty=\"format:\" --name-only FETCH_HEAD..HEAD $* | sort | uniq'"
+	rdiffchanges = "!csh -c 'git fetch $1 ; if($#argv>0) shift; git diff HEAD..FETCH_HEAD $*'"
+	rfchanges = "!csh -c 'git fetch $1 ; if($#argv>0) shift; git log --pretty=\"format:\" --name-only HEAD..FETCH_HEAD $* | sort | uniq'"
+	stepping = config --get intel.stepping
+	updatenow = !sh -c 'updatenow.pl $1'
 [color]
 	ui = auto
 [core]
@@ -37,7 +46,7 @@
 	proxy = http://proxy.sc.intel.com:911
 [intel]
 	clone-minimum-free-kb = 10485760
-	userInitVersion = 1
+	userInitVersion = 2
 [log]
 	decorate = true
 [merge]
