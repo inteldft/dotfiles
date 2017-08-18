@@ -89,7 +89,7 @@ sync-site () {
         return
     fi
 
-    if [[ $EC_SITE == 'sc' ]]; then
+    if [[ $EC_SITE == 'sc' || $EC_SITE == 'pdx' ]]; then
         local remote_host='fcab1249.fc'
     elif [[ $EC_SITE == 'fc' ]]; then
         local remote_host='scci19347.sc'
@@ -205,7 +205,7 @@ nbexit () {
     nbstatus --tar linux1 constants --fo csv numericvalue=="$1"
 }
 
-if [[ $EC_SITE == 'sc' ]]; then
+if [[ $EC_SITE == 'sc' || $EC_SITE == 'pdx' ]]; then
     build-local () {
         if (( $# < 2 )); then
             echo "Error: must specify dut and mc to build"

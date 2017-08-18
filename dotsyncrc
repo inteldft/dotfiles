@@ -75,4 +75,5 @@ layers/debug:.emacs.d/private/debug
 [hosts]
 sccj002253.sc.intel.com          git=ANY
 fcab1221.fc.intel.com            git=ANY
+plxd3483.pdx.intel.com           git=ANY
 [endhosts]

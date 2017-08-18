@@ -14,10 +14,13 @@ export PROMPT_DIRTRIM=5
 export MODEL_ROOT
 
 if [[ $EC_SITE == 'sc' ]]; then
-    export DSHOST=sccj002253.sc.intel.com
+    export DSHOST=$SC_HOSTNAME
+elif [[ $ECSITE == 'fc' ]]; then
+    export DSHOST=$FC_HOSTNAME
 else
-    export DSHOST=fcab1221.fc.intel.com
+    export DSHOST=$PDX_HOSTNAME
 fi
+
 
 #dont load interactive config if using a non-interactive shell
 if [[ -z ${PS1+x} ]]; then
