@@ -52,6 +52,7 @@ pygments/pygmentize:bin/pygmentize
 bash
 bash-it
 emacs.d
+tmux
 man:.local/share/man
 perl5:perl5
 
