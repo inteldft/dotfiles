@@ -1,3 +1,4 @@
+#!/usr/intel/bin/tcsh -f
 # EC Standard Login Environment -*- sh -*-
 # user .aliases file
 # $Source: /usr/cvs/cvsrep/ec_environ-1.0/release/user/aliases,v $
@@ -26,7 +27,11 @@ alias wide-l   'xrandr -s 1920x1080'
 
 alias exith 'history -h >> $HOME/doc/history.log && exit'
 alias save-history 'history -h >> $HOME/doc/history.log'
-alias srcenv 'source /p/hdk/rtl/hdk.rc -cfg shdk74;setenv NBQSLOT /SDG/sdg74/fe/build/chassis;setenv NBCLASS SLES11SP4\&\&20G'
+if ($EC_SITE == fc) then
+   alias srcenv 'source /p/hdk/rtl/hdk.rc -cfg shdk73; setenv NBQSLOT /SDG/sdg74/fe/build/chassis; setenv NBCLASS SLES11SP4\&\&20G'
+else
+    alias srcenv 'source /p/hdk/rtl/hdk.rc -cfg shdk74; setenv NBQSLOT /SDG/sdg74/fe/build/chassis; setenv NBCLASS SLES11SP4\&\&20G'
+endif
 alias setroot 'setenv MODEL_ROOT `$HOME/scripts/set_root.sh`'
 alias tool-config 'ToolConfig.pl get_tool_env spyglass | cut -f 2,3,4 -d " " | source /dev/stdin'
 
@@ -38,7 +43,7 @@ alias notify-home 'set exit_code=PASSED || set exit_code=FAILED ; $HOME/scripts/
 alias notify-work 'set exit_code=PASSED || set exit_code=FAILED ; $HOME/scripts/notify-work.sh $exit_code'
 alias notify-all  'set exit_code=PASSED || set exit_code=FAILED ; $HOME/scripts/notify-all.sh $exit_code'
 
-alias precmd 'echo "\a" ; $HOME/scripts/print_precmd.sh && setroot'
+# alias precmd 'echo "\a" ; $HOME/scripts/print_precmd.sh && setroot'
 
 alias bld '$GK_CONFIG_DIR/hooks/setup_git_config.pl -c \!:1; nbjob run --target $EC_SITE"_critical" --qslot $NBQSLOT --mail E bman -dut \!:1 -mc \!:2'
 alias check 'nbqstat -P $EC_SITE"_critical" --task-name --priority user=$USER'
