@@ -45,4 +45,4 @@ alias check 'nbqstat -P $EC_SITE"_critical" --task-name --priority user=$USER'
 alias spf 'setenv SPF_ROOT /p/hdk/cad/spf/latest; source $SPF_ROOT/bin/spf_setup_env'
 alias run 'simregress -dut \!:1 -model \!:2 -l \!:3 -trex -save -trex- -net'
 alias start-bash '/usr/intel/pkgs/bash/4.3/bin/bash'
-
+alias ta 'tmux attach -t wave_1'

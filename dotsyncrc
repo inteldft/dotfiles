@@ -32,7 +32,6 @@ profile.tjhinckl
 spacemacs
 tmux.conf
 toprc
-vimrc_background
 fzf.bash
 fzf
 
@@ -54,6 +53,7 @@ bash
 bash-it
 emacs.d
 man:.local/share/man
+perl5:perl5
 
 # emacs
 
@@ -67,6 +67,7 @@ packages/functions:.emacs.d/private/local/functions
 
 layers/perl:.emacs.d/private/perl
 layers/no-dots:.emacs.d/private/no-dots
+layers/debug:.emacs.d/private/debug
 
 [endfiles]
 

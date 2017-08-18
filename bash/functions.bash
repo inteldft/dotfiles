@@ -1,5 +1,38 @@
 #!/usr/intel/bin/bash
 
+
+munge () { # prevent duplicates in aggregate variables
+    local args=("$@")
+    local cmd_form end
+    for i in "${args[@]}"; do
+        [[ $i == '-cmd' ]] && cmd_form=1
+        [[ $i == '-end' ]] && end=1
+    done
+    local vars=(${args[@]:$((cmd_form + end))})
+
+    if (( ${#vars[@]} < 2 )); then
+        echo "USAGE: munge [-end|-cmd] VAR path/to/add"
+        return
+    fi
+
+    local var=${vars[0]}
+    local path=${vars[1]}
+    local delim
+
+    [[ $cmd_form ]] && delim='\s*;\s*' || delim=:
+    if ! [[ ${!var} =~ (^|$delim)$path($|$delim) ]]; then
+        [[ $cmd_form ]] && delim='; '
+        if [[ ! ${!var} ]]; then
+            export ${var}=$path
+        elif [[ $end ]]; then
+            [[ ${!var} == *\; ]] && delim=' '
+            export ${var}="${!var}${delim}${path}"
+        else
+            export ${var}="${path}${delim}${!var}"
+        fi
+    fi
+}
+
 # print out the size of all files/directories in the specified directory and sort them by size
 dir-size () {
     du -a -h --max-depth=1 "${1:-.}" | sort -h
@@ -57,9 +90,9 @@ sync-site () {
     fi
 
     if [[ $EC_SITE == 'sc' ]]; then
-        remote_host='fcab1249.fc'
+        local remote_host='fcab1249.fc'
     elif [[ $EC_SITE == 'fc' ]]; then
-        remote_host='scci19347.sc'
+        local remote_host='scci19347.sc'
     else
         echo "remote host unresolved"
         return
@@ -131,7 +164,7 @@ if [[ $EC_SITE == 'sc' ]]; then
 
     _setdftvars () {
         shopt -s nullglob
-        canidates=($MODEL_ROOT/tools/ipgen/*/)
+        local canidates=($MODEL_ROOT/tools/ipgen/*/)
         canidates=("${canidates[@]%/}")
         local cur=${COMP_WORDS[COMP_CWORD]}
         # shellcheck disable=SC2116
@@ -161,6 +194,12 @@ else
 
 fi
 
+_ipci () {
+    COMPREPLY=( $(compgen -W "$(ipci ls)" -- "${COMP_WORDS[COMP_CWORD]}") )
+}
+
+complete -F _ipci ipci
+
 # interpret Netbatch exit codes
 nbexit () {
     nbstatus --tar linux1 constants --fo csv numericvalue=="$1"
@@ -178,18 +217,16 @@ if [[ $EC_SITE == 'sc' ]]; then
             return
         fi
 
-        local stages=""
         if [[ $3 ]]; then
-            stages="-s all +s $3"
+            local stages="-s all +s $3"
         fi
 
-        local postfix=""
         shopt -s extglob
         if [[ $3 == @(sgdft|sglp) ]]; then
-            postfix="-1c -dut $1 -1c-";
+            local postfix="-1c -dut $1 -1c-";
         fi
 
-        command="bman -dut $1 -mc $2 $stages $postfix"
+        local command="bman -dut $1 -mc $2 $stages $postfix"
         echo "$command"
         eval "$command"
     }
@@ -205,15 +242,13 @@ if [[ $EC_SITE == 'sc' ]]; then
             return
         fi
 
-        local stages=""
         if [[ $3 ]]; then
-            stages="-s all +s $3"
+            local stages="-s all +s $3"
         fi
 
-        local postfix=""
         shopt -s extglob
         if [[ $3 == @(sgdft|sglp) ]]; then
-            postfix="-1c -dut $1 -1c-";
+            local postfix="-1c -dut $1 -1c-";
         fi
 
         local command="$GK_CONFIG_DIR/hooks/setup_git_config.pl -c $1; nbjob run --target ${EC_SITE}_critical --mail E bman -dut $1 -mc $2 $stages $postfix"
@@ -252,9 +287,8 @@ if [[ $EC_SITE == 'sc' ]]; then
             return
         fi
 
-        local test_dir=""
         if [[ $4 ]]; then
-            test_dir="-test_results $4"
+            local test_dir="-test_results $4"
         fi
 
         local command="simregress -dut $1 -model $2 -l $3 -trex -save -trex- -net -P ${EC_SITE}_critical -Q /SDG/sdg74/fe/build/chassis $test_dir"
