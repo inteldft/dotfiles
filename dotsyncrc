@@ -53,8 +53,11 @@ bash
 bash-it
 emacs.d
 tmux
+fonts
 man:.local/share/man
 perl5:perl5
+theme/base16-shell:.config/base16-shell
+theme/base16-gnome-terminal:.config/base16-gnome-terminal
 
 # emacs
 

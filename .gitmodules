@@ -37,3 +37,9 @@
 [submodule "tmux-yank"]
 	path = tmux/tmux-yank
 	url = sccj002253.sc.intel.com:~/custom/env_bare/tmux/tmux-yank/
+[submodule "theme/base16-gnome-terminal"]
+	path = theme/base16-gnome-terminal
+	url = https://github.com/chriskempson/base16-gnome-terminal.git
+[submodule "theme/base16-shell"]
+	path = theme/base16-shell
+	url = https://github.com/chriskempson/base16-shell.git
