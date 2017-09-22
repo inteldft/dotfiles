@@ -52,8 +52,12 @@ pygments/pygmentize:bin/pygmentize
 bash
 bash-it
 emacs.d
+tmux
+fonts
 man:.local/share/man
 perl5:perl5
+theme/base16-shell:.config/base16-shell
+theme/base16-gnome-terminal:.config/base16-gnome-terminal
 
 # emacs
 
@@ -68,6 +72,9 @@ packages/functions:.emacs.d/private/local/functions
 layers/perl:.emacs.d/private/perl
 layers/no-dots:.emacs.d/private/no-dots
 layers/debug:.emacs.d/private/debug
+
+yasnippet/perl-mode:.emacs.d/private/snippets/perl-mode
+yasnippet/cperl-mode:.emacs.d/private/snippets/cperl-mode
 
 [endfiles]
 

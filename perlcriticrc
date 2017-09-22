@@ -22,6 +22,9 @@ exclude_functions = print say close
 allowed_values = 0 1 -1 2 65535
 allowed_types = Hex Binary
 
+[Subroutines::RequireArgUnpacking]
+short_subroutine_statements = 2
+
 [Variables::ProhibitPunctuationVars]
 allow = $0 $! ${^CHILD_ERROR_NATIVE}
 

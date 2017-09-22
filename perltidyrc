@@ -21,4 +21,7 @@
 --nospace-for-semicolon          # false
 --nooutdent-long-lines           # false
 --break-at-old-comma-breakpoints # false
-# --variable-maximum-line-length # not supported in our 2009 version of perltidy
+--variable-maximum-line-length # not supported in the 2009 version of perltidy
+
+# minmal config
+# -l=130 -ci=4 -pt=2 -boc -vmll
