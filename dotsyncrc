@@ -73,6 +73,9 @@ layers/perl:.emacs.d/private/perl
 layers/no-dots:.emacs.d/private/no-dots
 layers/debug:.emacs.d/private/debug
 
+yasnippet/perl-mode:.emacs.d/private/snippets/perl-mode
+yasnippet/cperl-mode:.emacs.d/private/snippets/cperl-mode
+
 [endfiles]
 
 ## hostname                     type=masterhost, ANY or NONE    files=dotfile:tolink,another:tolink

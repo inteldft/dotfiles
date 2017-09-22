@@ -6,11 +6,12 @@ export ALL_PROXY="http://proxy.${EC_SITE}.intel.com:911" # proxy for anything
 export HTTP_PROXY=$ALL_PROXY # proxy for http
 export GCONFTOOL=gconftool-2 # required to configure the theme of Gnome
 export VERILATOR_ROOT=~/personal/verilator-3.884 # used to build verilator models
-export EDITOR=vim # editor for commit messages and command edits
+export EDITOR=/usr/intel/bin/vim # editor for commit messages and command edits
 export SC_HOSTNAME=sccj002253.sc.intel.com
 export FC_HOSTNAME=fcab1249.fc.intel.com
 export PDX_HOSTNAME=plxd3507.pdx.intel.com
 export PROMPT_DIRTRIM=5
+export DISPLAY=$HOSTNAME:1.0
 export MODEL_ROOT
 
 if [[ $EC_SITE == 'sc' ]]; then
