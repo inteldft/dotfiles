@@ -183,22 +183,15 @@ else
         export STF_SPFSPEC=$MODEL_ROOT/verif/tests/JTAG_BFM_CTT_files/spf/dnv.stf.spfspec
         export TAP_SPFSPEC=$MODEL_ROOT/verif/tests/JTAG_BFM_CTT_files/spf/dnv.tap.spfspec
         export TAP2STF_MAP_FILE=$MODEL_ROOT/verif/tests/dft/source_stfstf/dnv.topo
-        export REGLISTDIR=$MODEL_ROOT/verif/tests/lists/regression
-        export ESPFDIR=$MODEL_ROOT/verif/tests/dft/source_spf
-        export ITPPDIR=$MODEL_ROOT/verif/tests/dft/itpp
+        export REGLIST_DIR=$MODEL_ROOT/verif/tests/lists/regression
+        export ESPF_DIR=$MODEL_ROOT/verif/tests/dft/source_scan_10nm
+        export ITPP_DIR=$MODEL_ROOT/verif/tests/dft/itpp
         export DFT_GLOBAL_DIR=${DFT_GLOBAL_DIR-${HOME}/workspace/chassis_dft_val_global}
 
         unset LD_LIBRARY_PATH
         srcspf latest
     }
-
 fi
-
-_ipci () {
-    COMPREPLY=( $(compgen -W "$(ipci ls)" -- "${COMP_WORDS[COMP_CWORD]}") )
-}
-
-complete -F _ipci ipci
 
 # interpret Netbatch exit codes
 nbexit () {
