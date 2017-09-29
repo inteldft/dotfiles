@@ -47,6 +47,7 @@ bin/fzf-tmux:bin/fzf-tmux
 bin/diskhogs:bin/diskhogs
 bin/verdiwaves:bin/verdiwaves
 pygments/pygmentize:bin/pygmentize
+scripts/perl_cmd_line.pl:scripts/perl_cmd_line.pl
 
 # directories
 bash
