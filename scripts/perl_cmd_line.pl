@@ -22,9 +22,10 @@ while (<$fh>) {
 close $fh;
 
 $lines =~ s/#.*$//mg;
-$lines =~ s/=>.*(?:,|$)//mg;
 if ($lines =~ /GetOptions[\s\n]*[(](.*?)[)]/s) {
-    my @matches = $1 =~ /(?:^|['"|\s(])([[:alpha:]_][[:alnum:]_]*)\b(?![({};])/mg; # At some point make this regex less ugly
+    my $match = $1;
+    $match =~ s/=>.*(?:,|$)//mg;
+    my @matches = $match =~ /(?:^|['"|\s(])([[:alpha:]_][[:alnum:]_]*)\b(?![({};])/mg; # At some point make this regex less ugly
     print join q{ }, map { q{-} . $_ } @matches;
 }
 
