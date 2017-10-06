@@ -17,6 +17,7 @@ else
     alias srcenv='source /p/hdk/rtl/cad/x86-64_linux26/intel/Modules/3.2.10.2/init/bash; module load lv_cfg; unset module'
 fi
 
+alias ports='netstat -lptu'
 alias xterm-custom='xterm -fs 11 -u8'
 
 alias notify-home='exit_code=PASSED || exit_code=FAILED ; $HOME/scripts/notify-home.sh $exit_code'

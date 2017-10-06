@@ -286,6 +286,12 @@
         source $HOME/.aliases
     endif
 
+    setenv LC_ALL en_US.UTF-8
+    setenv ALL_PROXY http://proxy.${EC_SITE}.intel.com:911
+    setenv HTTP_PROXY $ALL_PROXY
+    setenv GCONFTOOL gconftool-2 # required to configure the theme of Gnome
+    setenv VERILATOR_ROOT ~/personal/verilator-3.884 # used to build verilator models
+    setenv EDITOR /usr/intel/bin/vim # editor for commit messages and command edits
     setenv INPUTRC $HOME/.inputrc:$INPUTRC
     # echo "I: (.cshrc.$USER) [leaving] `/bin/date`" >> $ec_env_error_log
     ######################################################

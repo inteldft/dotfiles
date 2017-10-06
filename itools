@@ -7,3 +7,5 @@ P:less 418
 P:autotools 2.69
 P:ImageMagick 6.8.9-1
 P:perltidy /usr/intel/pkgs/perl/5.14.1/bin/perltidy
+P:gcc 7.2.0
+# python3 is broken. ESD wont fix. update path instead
