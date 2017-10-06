@@ -70,6 +70,6 @@ perl_scripts=(
 
 for i in "${perl_scripts[@]}"
 do
-    complete -F _perl_script "$i"
+    complete -F _perl_script -o default -o bashdefault "$i"
 done
 
