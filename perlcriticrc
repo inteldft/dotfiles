@@ -1,5 +1,6 @@
 severity = 1
 top = 100
+program-extensions = .espf
 
 # adjusted policies
 [Subroutines::ProhibitAmpersandSigils]
@@ -9,21 +10,28 @@ severity = 3
 [InputOutput::ProhibitBarewordFileHandles]
 severity = 3
 [Subroutines::ProhibitSubroutinePrototypes]
-severity = 2
+severity = 4
 [ValuesAndExpressions::ProhibitNoisyQuotes]
 severity = 1
 [Variables::ProhibitConditionalDeclarations]
 severity = 3
+[CodeLayout::ProhibitTrailingWhitespace]
+severity = 3
+[Modules::RequireEndWithOne]
+severity = 4
+
+[CodeLayout::ProhibitHardTabs]
+severity = 5
+allow_leading_tabs = 0
 
 [InputOutput::RequireCheckedSyscalls]
-exclude_functions = print say close
-
-[ValuesAndExpressions::ProhibitMagicNumbers]
-allowed_values = 0 1 -1 2 65535
-allowed_types = Hex Binary
+exclude_functions = print say
 
 [Subroutines::RequireArgUnpacking]
 short_subroutine_statements = 2
+
+[ValuesAndExpressions::ProhibitInterpolationOfLiterals]
+allow_if_string_contains_single_quote = 1
 
 [Variables::ProhibitPunctuationVars]
 allow = $0 $! ${^CHILD_ERROR_NATIVE}
@@ -31,15 +39,12 @@ allow = $0 $! ${^CHILD_ERROR_NATIVE}
 [Variables::RequireLocalizedPunctuationVars]
 allow = %ENV
 
-[InputOutput::ProhibitBacktickOperators]
-only_in_void_context = 1
-
 [TestingAndDebugging::ProhibitNoWarnings]
-allow = qw
+allow = qw once
 
 [Documentation::RequirePodSections]
-lib_sections    = NAME | SYNOPSIS | DESCRIPTION | AUTHOR | LICENSE AND COPYRIGHT
-script_sections = NAME | USAGE    | DESCRIPTION | AUTHOR | LICENSE AND COPYRIGHT
+lib_sections    = NAME | SYNOPSIS | DESCRIPTION | COPYRIGHT
+script_sections = NAME | USAGE    | DESCRIPTION | COPYRIGHT
 
 # disabled policies
 [-CodeLayout::ProhibitParensWithBuiltins]
@@ -61,7 +66,12 @@ script_sections = NAME | USAGE    | DESCRIPTION | AUTHOR | LICENSE AND COPYRIGHT
 [-RegularExpressions::RequireLineBoundaryMatching]
 
 [-ValuesAndExpressions::ProhibitEmptyQuotes]
+[-ValuesAndExpressions::ProhibitMagicNumbers]
 
 [-Miscellanea::ProhibitTies]
 
 [-BuiltinFunctions::ProhibitStringyEval]
+
+[-ValuesAndExpressions::RequireNumberSeparators]
+
+[-Variables::ProhibitPackageVars]
