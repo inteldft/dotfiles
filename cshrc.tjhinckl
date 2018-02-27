@@ -261,7 +261,11 @@
             # set prompt="${magenta}%h${cyan} %P ${green}[${blue}%c4${green}]${yellow}%#${end} "
             # set prompt="\n${green}[${blue}%c4${green}]\n${green}[${cyan}%d.%T ${magenta}%h${green}]${yellow}%#${end} "
 
-            set prompt="${green}[${cyan}%d.%T ${magenta}%h${green}]${yellow}%#${end} "
+            if ($TERM == dumb) then
+                set prompt="> "
+            else
+                set prompt="${green}[${cyan}%d.%T ${magenta}%h${green}]${yellow}%#${end} "
+            endif
 
             unset red green yellow blue magenta cyan yellow white end
         endif
