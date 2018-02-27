@@ -1,0 +1,1329 @@
+#!/usr/intel/pkgs/perl/5.14.1/bin/perl
+
+##
+## lsti -- a modified testinfo
+##
+## Original Author: Sam Huffman (shuffman@ichips.intel.com)
+## Maintainer: Troy Hinckley troy.j.hinckley@intel.com
+##
+## Usage: lsti *rpt
+##
+
+use strict;
+use warnings;
+
+BEGIN {
+        if (! exists ($ENV{'VALID_ROOT'})) {
+            die "You must be in a HDK environment to use lsti.\n";
+        }
+
+    }
+
+
+# Piloting a Mars tool to collect usage statistics
+#system( "/usr/bin/csh -c \"source $ENV{VALID_ROOT}/bin/mars_setup && $ENV{VALID_ROOT}/bin/mars_probe $0 ".join( ' ', @ARGV )." \"" ) if defined $ENV{USER} && $ENV{USER} ne 'gkuser';
+
+use strict;
+use warnings;
+
+use Text::Wrap;
+
+use lib $ENV{'VTLIB'};
+use Output;
+
+use lib "$ENV{VALID_ROOT}";
+use lib "$ENV{'VALID_ROOT'}/bin/";
+use lib "/p/hdk/rtl/valid/bin/";
+
+
+use FileParser;
+
+use lib "$ENV{'GLOBAL_TOOLS'}/lib/perl";
+use Util;
+use Cwd;
+
+use Data::Dumper;
+use XML::Simple;
+
+use Term::Size;
+my ($term_cols, $term_rows) = &Term::Size::chars(*STDOUT);
+$term_cols = 120 if (! $term_cols);
+
+our $opt_bf = "/nfs/sc/disks/sdg74_1185/tjhinckl/workspace/models/snr/buckets/custom_buckets.pl";
+
+our ($opt_triage, $opt_not2)  = (0, 0);
+# the default of -t2 is enabled only in PDX.
+our $opt_t2 = (exists $ENV{SITE} && $ENV{SITE} eq 'pdx') ? 1 : 0;
+
+our ($opt_diff, $opt_age, $opt_dut, $opt_model, $opt_team, $opt_unique_tag, $opt_query) = (0, 0, 0, 0, 0, 0, 0);
+
+our ($opt_h, $opt_f, $opt_v, $opt_rgr_id, $opt_debug, $opt_compare, $opt_l, $opt_s, $opt_nowrap, $opt_a, $opt_r,
+     $opt_fullpath,
+     $opt_xml_tests, $opt_xml_buckets, $opt_xml_tests_cfg, $xml_tests_data, $xml_buckets_data, $max_bucket_size, $opt_nbhost);
+&Util::parse_opts("bf:", "triage", "h|help", "rgr_id:", "debug", "t2", "not2", "xml_tests:", "xml_tests_cfg:", "xml_buckets:",
+                  "a|acemodel", "r|running", "diff", "age:", "dut:", "model:", "unique_tag:", "team:", "query:",
+                  "fullpath|full",
+                  "compare", "v|verbose", "f|fail", "l|long", "s|summary", "nowrap", "nbhost");
+$opt_nowrap = 1;
+$opt_l = 1;
+
+&help(), exit(1) if ($opt_h);
+&id_fatal("[-compare] is not currently compatible with [-triage].")
+    if ($opt_compare && $opt_triage);
+&id_fatal("[-compare] is not currently compatible with [-rgr_id].")
+    if ($opt_compare && $opt_rgr_id);
+&id_fatal("[-dut], [-team], [-model], [-age], [-query] require [-diff].")
+    if (($opt_age or $opt_dut or $opt_model or $opt_team or $opt_unique_tag or $opt_query) and !$opt_diff);
+&id_fatal("[-age], [-dut], [-model], [-unique_tag] and [-team] are not currently compatible with [-query].")
+    if ($opt_query and ($opt_age or $opt_dut or $opt_model or $opt_team or $opt_unique_tag));
+&id_fatal("[-compare] is not currently compatible with [-r].")
+    if ($opt_compare && $opt_r);
+&id_fatal("[-f] is not compatible with [-r].")
+    if ($opt_f && $opt_r);
+
+
+## these two flows are very different than the 'main' flow, so
+## just exit once they're complete.
+if ($opt_compare) {
+    &compare(@ARGV);
+    exit(0);
+
+} elsif ($opt_s) {
+    &summary(@ARGV);
+    exit(0);
+
+}
+
+# our $debug = 1;
+our $db;
+if ($opt_triage && !$opt_rgr_id) {
+    &id_fatal("-triage also requires a -rgr_id #");
+}
+if ($opt_rgr_id || ($opt_t2 && !$opt_not2)) {
+    $Output::indent = 0;
+    $db = new HSD("hsd_phablet_tg");
+    $db->init();
+}
+
+my ($pass,$fail,$total) = (0,0,0);
+my $migi_mode = 0;
+
+## load the error definitions -- shared with avdebug
+our (@failure_regexps, @avdebug_regexp_hooks);
+do $opt_bf;
+
+my (@results, %buckets);
+
+# Convert warnings to die. They can cause corrupted output.
+$SIG{__WARN__} = sub { die "FATAL: " . $_[0] };
+
+if ($opt_rgr_id) {
+    &load_rpt_data_from_hsd();
+} else {
+    local @ARGV = glob "*.rpt *.rpt.gz" if (! scalar(@ARGV));
+    #@ARGV = <*.rpt *.rpt.gz *.xml> if (! scalar(@ARGV));
+    #$migi_mode = grep(/\.xml$/, @ARGV);
+    &load_rpt_data();
+}
+
+&cleanup_tests();
+&bucket_tests();
+
+&print_test_information();
+print "\n\n\n";
+
+&print_bucket_information();
+print "\n\n\n";
+
+&print_xml_data() if ($opt_xml_tests || $opt_xml_buckets);
+
+if ($opt_triage) {
+    &print_bug_information();
+    print "\n\n\n";
+}
+
+&print_summary_information();
+print "\n";
+
+sub load_rpt_data
+    {
+        foreach my $rpt_file (@ARGV) {
+
+            &id_debug("Reading $rpt_file...\n");
+
+            &id_fatal("Unable to read report file [$rpt_file].")
+                if (! -r $rpt_file);
+
+            my ($tmp_data, $tmp_info) = &FileParser::read_file($rpt_file);
+
+            push @results, @$tmp_data;
+            &id_debug("\tAdded " . scalar(@$tmp_data) . " records\n");
+
+            if (exists $tmp_info->{'TOTAL TESTS'}) {
+                $total = $total + $tmp_info->{'TOTAL TESTS'};
+            } else {
+                $total = $total + scalar(@$tmp_data);
+            }
+        }
+    }
+
+
+sub load_rpt_data_from_hsd
+    {
+        my $data = $db->query('focus' => 'result',
+                              'query' => [ 'result.regression_id', '==', $opt_rgr_id ],
+                              'retrieve' => [ 'result.status',
+                                              'result.failure_cause',
+                                              'result.failure_string',
+                                              'result.test_id',
+                                              'result.id',
+                                              'result.result_directory',
+                                              'result.cycle_count',
+                                              'result.bucket_id',
+                                              'result.debug_status',
+                                              'result.debugger',
+                                              'result.notes',
+                                              'result.hasbugs',
+                                              'result.bugs_list']);
+
+
+        $total = scalar(@$data);
+
+        ## now try to extrapolate .rpt file data from the result record.
+        my ($i);
+        for ($i = 0; $i < scalar(@$data); $i++) {
+            my $d = $data->[$i];
+
+            $results[$i] = { };
+            $results[$i]->{'TEST ID'} = $d->get("result.test_id");
+            $results[$i]->{'RESULT ID'} = $d->get("result.id");
+            $results[$i]->{'LAST CYCLE'} = $d->get("result.cycle_count");
+            $results[$i]->{'TEST STATUS'} = uc($d->get("result.status"));
+            $results[$i]->{'TEST RESULT'} = $d->get("result.failure_string");
+            $results[$i]->{'EXEC ARGS'} = $d->get("result.cmd_line");
+            $results[$i]->{'RESULTS DIR'} = $d->get("result.result_directory");
+            $results[$i]->{'BUCKET ID'} = $d->get("result.bucket_id");
+            $results[$i]->{'DBG_STAT'} = $d->get("result.debug_status");
+            $results[$i]->{'NOTES'} = $d->get("result.notes");
+
+            # $results[$i]->{'TEST RESULT'} =~ s/@\s+\d+//;
+            # $results[$i]->{'TEST RESULT'} = "";
+            if ($d->get("result.hasbugs") eq 'yes') {
+                $results[$i]->{'BUG_LINK'} = [ split(',',$d->get("result.bugs_list")) ];
+            } else {
+                $results[$i]->{'BUG_LINK'} = [ ];
+            }
+            if ($results[$i]->{'DBG_STAT'} =~ /^(open|wip)$/) {
+                $results[$i]->{'NOTES'} = $d->get("result.debugger") . " ($1) " . $results[$i]->{'NOTES'};
+            } else {
+                my $cause = $d->get("result.failure_cause");
+                if ($cause ne 'bug') {
+                    push(@{$results[$i]->{'BUG_LINK'}}, $cause);
+                }
+            }
+
+            if ($opt_triage && !defined($results[$i]->{'BUCKET ID'})) {
+                &id_fatal("-triage specified, but no bucket id for result id ",
+                          $results[$i]->{'RESULT ID'},", failure = ",
+                          $results[$i]->{'TEST RESULT'},"\n");
+            }
+
+            ## well this is a real pain. prior to running, there isn't any real
+            ## report file data in the result record, so grab the test name from
+            ## the associated test record if it exists. somehow this doesn't feel
+            ## like a real good solution to me, but it is cheap and easy.
+            ##
+            ## TODO: triage puts a test name in the result record. Can we use that?
+            ##
+            my $test = $db->query('focus' => 'test',
+                                  'query' => [ 'test.id', '=', $results[$i]->{'TEST ID'} ],
+                                  'retrieve' => [ 'test.path' ]);
+
+            my $test_name = $test->[0]->get("test.path");
+            $test_name =~ s|.*/||;
+            $results[$i]->{'TEST NAME'} = $test_name;
+        }
+    }
+
+sub cleanup_tests
+    {
+        my $test_id = 1;
+        my @hsd_recs;
+
+        foreach my $r (@results) {
+
+            $r->{'TEST ID'} = "Test." . $test_id++
+                if (! exists $r->{'TEST ID'});
+
+            if (exists($r->{'RESULT ID'})) {
+
+            } elsif (defined $r->{'EXEC ARGS'} && $r->{'EXEC ARGS'} =~ m/-result_id (\d+)/) {
+                $r->{'RESULT ID'} = $1;
+            } elsif ( (defined $r->{'TEST RES PATH'}) && ( -e $r->{'TEST RES PATH'}."/._result_id.t2" )) {
+                #printf ("we have result id in t2 file\n");
+                my $id = `cat $r->{'TEST RES PATH'}/._result_id.t2`;
+                chomp $id;
+                #printf ("we have result id in t2 file == $id \n");
+                $r->{'RESULT ID'} = $id;
+                #printf ("we have result id in t2 file == $r->{'RESULT ID'} \n");
+            } else {
+                $r->{'RESULT ID'} = "<none>";
+            }
+        }
+    }
+
+sub bucket_tests
+    {
+        my $bucket_id = 1;
+        my $test_id = 1;
+        my %bucket_string;
+
+      RECORD:
+        foreach my $r (@results) {
+            $pass++ if ($r->{'TEST STATUS'} eq "PASS");
+            $fail++ if ($r->{'TEST STATUS'} eq "FAIL" ||
+                            $r->{'TEST STATUS'} eq "TAINTED");
+
+            ## only triage failing tests
+            next if ($r->{'TEST STATUS'} ne "FAIL");
+
+            if (($opt_triage || ($opt_t2 && !$opt_not2)) && defined $r->{'BUCKET ID'} && $r->{'BUCKET ID'} =~ /^\d+$/) {
+
+                my $tbucket_id = $r->{'BUCKET ID'};
+
+                if (!defined($bucket_string{$tbucket_id})) {
+
+                    my $q = $db->query('focus' => 'bucket',
+                                       'query' => [ 'bucket.id', '=', $tbucket_id ],
+                                       'retrieve' => [ 'bucket.name' ]);
+                    (my $bucket_name = $q->[0]->get('bucket.name')) =~ s/[\s\n]*$//;
+                    $bucket_string{$tbucket_id} = sprintf("[%5s] %s", $tbucket_id, $bucket_name);
+                }
+                &add_bucket(\%buckets, $bucket_string{$tbucket_id}, \$bucket_id, $r);
+
+                map { $buckets{$bucket_string{$tbucket_id}}->{'bugs'}->{$_} = 1 } @{$r->{'BUG_LINK'}} if exists $r->{'BUG_LINK'};
+
+            } else {
+
+                #printf ("lsti: line = %s\n", $_);
+                map { &{$_}($r->{'TEST RESULT'}) } @avdebug_regexp_hooks;
+
+                foreach my $e (@failure_regexps) {
+
+                    foreach my $line (split /\n/, $r->{'TEST RESULT'}) {
+
+                        my $hsd_eval = $e->{'hsd'};
+
+                        if ($line =~ m/$e->{'regexp'}/i) {
+                            my ($bucket, $hsd);
+
+                            if (ref $e->{bucket} eq 'CODE') {
+                                $bucket = $e->{bucket}->($r) || "No bucket returned from CODE";
+                            } else {
+                                $bucket = eval "\"$e->{'bucket'}\"";
+                            }
+
+                            if (defined($hsd_eval)) {
+                                $hsd = [ map { eval($_); } @$hsd_eval ];
+                                map { s/\d/_/g; } @$hsd;
+                            }
+
+                            &add_bucket(\%buckets, $bucket, \$bucket_id, $r);
+
+                            if (defined($hsd)) {
+                                $buckets{$bucket}->{'hsd'} = $hsd;
+                            }
+
+                            next RECORD;
+                        }
+                    }
+                }
+                # if we got here we didn't match any failure string, or TEST
+                # RESULTS was an empty string. Drop it into a bogus bucket
+                &add_bucket(\%buckets, "No bucket match or empty test result string", \$bucket_id, $r);
+            }
+        }
+    }
+
+sub add_bucket {
+    my ($bhash, $bname, $bid, $r) = @_;
+    if (! exists $bhash->{$bname}) {
+        $bhash->{$bname}->{'id'} = $$bid++;
+        $bhash->{$bname}->{'entries'} = [ ];
+        $bhash->{$bname}->{'bugs'} = { };
+    }
+    push @{$bhash->{$bname}->{'entries'}}, $r;
+    $r->{'bucket'} = $bhash->{$bname};
+}
+
+sub print_test_information
+    {
+        my %test_dirs = ();
+        my @cols;
+        if ($migi_mode) {
+            @cols = ('Result Dir', 'Test Name');
+        } else {
+            @cols = ('Result Dir or Test Name');
+        }
+
+        if ($opt_a) {
+            push(@cols, "Ace Model");
+        }
+        my @header = ("Test ID", "Result ID", @cols, "Cycles", "Status", "Bucket");
+        if ($opt_triage) {
+            push @header, "Bugs", "Notes";
+        } elsif ($opt_t2 && !$opt_not2) {
+            push @header, "Status", "Debugger";
+        }
+
+        if ($opt_nbhost) {
+            push @header, "NB Host";
+        }
+
+        if ($opt_f) {
+            @results = grep ( $_->{'TEST STATUS'} eq 'FAIL', @results);
+        }
+
+        &init_xml_tests(\@header, keys %{$results[0]}) if ($opt_xml_tests);
+
+        my @sorted_data = sort {
+
+            ## PASSing tests should come first
+            return(-1) if ($a->{"TEST STATUS"} eq "PASS");
+            return (1) if ($b->{"TEST STATUS"} eq "PASS");
+
+            ## next come RUNning tests
+            return(-1) if ($a->{'TEST STATUS'} =~ /^RUN/);
+            return(1) if ($b->{'TEST STATUS'} =~ /^RUN/);
+
+            ## and SUBMITted tests
+            return(-1) if ($a->{'TEST STATUS'} eq "SUBMIT");
+            return(1) if ($b->{'TEST STATUS'} eq "SUBMIT");
+
+            ## and TAINTED tests (Migi only)
+            return (-1) if ($a->{'TEST STATUS'} eq 'TAINTED');
+            return (1) if ($b->{'TEST STATUS'} eq 'TAINTED');
+
+            ## then sort on bucket id.
+            if (! defined $a->{'bucket'}->{id}) {
+                local $SIG{__WARN__};
+                die sprintf("No bucket found for test '%s' in job %d\n", $a->{'TEST NAME'}, $a->{JOBID});
+            }
+            if (! defined $b->{'bucket'}->{id}) {
+                local $SIG{__WARN__};
+                die sprintf("No bucket found for test '%s' in job %d\n", $b->{'TEST NAME'}, $b->{JOBID});
+            }
+            return (-1) if ($a->{'bucket'}->{'id'} < $b->{'bucket'}->{'id'});
+            return (1)  if ($a->{'bucket'}->{'id'} > $b->{'bucket'}->{'id'});
+
+            ## In migi mode, try to group by jobid.
+            if ($migi_mode) {
+                return ($a->{JOBID} <=> $b->{JOBID});
+            } else {
+                return 0;
+            }
+
+        } @results;
+
+        my @rows = ( );
+        my $job_id = -1;
+        my %job_cnt;
+        my $indent = 0;
+
+        # Find the directory paths that are common to all the results
+        my @commondirs;
+        if (@sorted_data) {
+            @commondirs = split('/',$sorted_data[0]->{'RESULTS DIR'});
+            foreach my $r (@sorted_data) {
+                my @d = split('/',$r->{'RESULTS DIR'});
+                for (0..$#commondirs) {
+                    if ($commondirs[$_] ne $d[$_]) {
+                        splice(@commondirs,$_);
+                        last;
+                    }
+                }
+            }
+        }
+        # Construct a string of the commo path that we can remove from the results printout
+        my $removepath = quotemeta(join("/",@commondirs) . "/");
+        $removepath = "" if ($opt_fullpath);
+        my $removepath_minus = quotemeta(join("/",@commondirs[0..$#commondirs-1]) . "/");
+        $removepath_minus = "" if ($opt_fullpath);
+
+        foreach my $r (@sorted_data) {
+            my $b = $r->{'bucket'};
+            my $b_id = "";
+            $b_id = $b->{'id'} if (defined($b));
+
+            my $data = [ $r->{'TEST ID'}, $r->{'RESULT ID'} ];
+
+            if (exists($r->{'RESULTS DIR'}) && ($r->{'RESULTS DIR'} ne "")) {
+
+                my ($result_dir) = $r->{'RESULTS DIR'};
+                if ($result_dir eq join("/",@commondirs)) {
+                    $result_dir =~ s/^$removepath_minus//;
+                } else {
+                    $result_dir =~ s/^$removepath//;
+                }
+                if ($r->{'RESULTS DIR'} =~ /\/(external\d*|rerun\d*|external\d*\/rerun\d*)$/) {
+                    $r->{'RESULTS DIR'} =~ m/([^\/]*)\/(external\d*|rerun\d*|external\d*\/rerun\d*)$/;
+                    $result_dir = $1;
+                }
+                if ($migi_mode) {
+                    if ($r->{JOBID} == $job_id && $job_cnt{$job_id}++ > 0) {
+                        $rows[-1][2] = " |";
+                    }
+                    $job_id = $r->{JOBID};
+
+                    if ($r->{'BUILD DIR'}) {
+                        push(@$data, $result_dir, $r->{'BUILD DIR'});
+                    } else {
+                        push(@$data, $result_dir, $r->{'TEST NAME'});
+                    }
+                } else {
+                    $result_dir =~ s/\s*\(deleted\)$//;
+                    push(@$data, $result_dir);
+                }
+
+            } else {
+                if ($migi_mode) {
+                    # No Result Dir
+                    if ($r->{'BUILD DIR'}) {
+                        push(@$data, '', $r->{'BUILD DIR'});
+                    } else {
+                        push(@$data, '', $r->{'TEST NAME'});
+                    }
+                } else {
+                    push(@$data, $r->{'TEST NAME'} || '<none>');
+                }
+            }
+            push @$data, ($r->{'ACE MODEL'} || "N/A") if $opt_a;
+            push @$data, ($r->{'LAST CYCLE'} || $r->{'CYCLES'} || 0), $r->{'TEST STATUS'}, $b_id;
+            my $res_dir = $r->{'RESULTS DIR'};
+            $res_dir =~ s/\/(external\d*|rerun\d*|external\d*\/rerun\d*)$//;
+            $res_dir =~ s/.*\///;
+            $test_dirs{$res_dir} = 1;
+
+            if ($opt_triage) {
+                if ($r->{'TEST STATUS'} eq 'FAIL') {
+                    if (@{$r->{'BUG_LINK'}}) {
+                        push(@$data, "[".join(',',@{$r->{'BUG_LINK'}})."]");
+                    } else {
+                        push(@$data, '');
+                    }
+                    $r->{NOTES} =~ s|\n|//|g;
+                    push(@$data, $r->{'NOTES'});
+                } else {
+                    push(@$data, '', '');
+                }
+            } elsif ($opt_t2 && !$opt_not2) {
+                if ($r->{'TEST STATUS'} eq 'FAIL') {
+                    push @$data, $r->{'DBG_STAT'} || '';
+                    push @$data, $r->{'NOTES'} || '';
+                } else {
+                    push @$data, '', '';
+                }
+            }
+            if ($opt_nbhost) {
+                push @$data, $r->{'HOST OF RUN'} || '';
+            }
+
+            &add_xml_test(\@header, $data, $r) if ($opt_xml_tests);
+            push @rows, $data;
+        }
+        # print the list of running tests
+        if ($opt_r) {
+            foreach my $rpt_file (@ARGV) {
+                my $file = $rpt_file;
+                $file =~ s/\.rpt//;
+                my @netbatch_ready = glob("$file*netbatch_ready");
+                next unless scalar(@netbatch_ready) == 1;
+                my $dir =  `/usr/intel/bin/realpath $rpt_file`; chomp $dir;
+                $dir =~ s/[^\/]+$//;
+
+                my %running_hosts = find_running_hosts($dir);
+                open(FD, $netbatch_ready[0]) || die ("failed to open $file for reading");
+                while (<FD>) {
+                    chomp;
+                    if (/\-uniq_test_name\s+(\S+)/) {
+                        if (!defined $test_dirs{$1}) {
+                            my $nbstatus = defined $running_hosts{$1}{host} ? "Running" : "Waiting";
+                            my $host = defined $running_hosts{$1}{host} ? "($running_hosts{$1}{host} : " : "(N/A : ";
+                            $host .= defined $running_hosts{$1}{dir} ? "$running_hosts{$1}{dir})" : "N/A)";
+                            #$host .= defined $running_hosts{$1}{jobid} ? "$running_hosts{$1}{jobid})" : "N/A)";
+                            $host = "" if $nbstatus eq "Waiting";
+                            my $running = $1;
+                            my $data;
+                            my $status_found = 0;
+                            foreach my $col (@header) {
+                                push @$data, 'N/A' if ($col !~ /Result Dir/ && $col !~ /Status/ && !$status_found);
+                                push @$data, "$running" if $col =~ /Result Dir/;
+                                push @$data, "$nbstatus $host" if ($col =~ /Status/ && !$status_found);
+                                push @$data, '' if ($status_found);
+                                $status_found = 1 if $col =~ /Status/;
+                            }
+                            push @rows, $data;
+                        }
+                    }
+                }
+                close FD;
+            }
+        }
+
+        &print_table(\@header, @rows);
+
+        if ($opt_triage) {
+            print "\n\n";
+            &print_table(['Regression Id'], [$opt_rgr_id]);
+        }
+    }
+
+    sub find_running_hosts
+    {
+        my %res = ();
+        my $dir = shift;
+        $dir =~ s/\/+$//;
+        return %res unless -e "$dir/simregress.log";
+        open (FD, "grep 'ifeed command line' $dir/simregress.log|") or die ("Failed to open $dir/simregress.log for reading\n");
+        my $pool = "";
+        while (<FD>) {
+            next unless /ifeed.*-P\s(\S+)/;
+            $pool = $1;
+        }
+        close FD;
+        return %res if $pool eq "";
+        open(FD, "nbqstat -P $pool -f | grep -b2 $dir |") or die ("Failed to run nbqstat -P pool\n");
+        my $job_id = '';
+        while (<FD>) {
+            if (/\s+Job id\s+=\s+(\d+)/) {
+                $job_id = $1;
+            }
+            if (/Job Name.\s+(\S+).log\s+Host Name.\s+(\S+)/) {
+                $res{$1}{host} = $2;
+                $res{$1}{jobid} = $job_id;
+            } elsif (/\s+.wp\s+(\/netbatch\/\S+_\d+_\d+_\d+_\d+_\d+_\d+_(\S+))/) {
+                $res{$2}{dir} = $1;
+            }
+        }
+        close FD;
+        return %res;
+    }
+
+sub print_bucket_information
+    {
+        my @sorted_buckets = sort {
+            $buckets{$a}->{'id'} <=> $buckets{$b}->{'id'};
+        } keys(%buckets);
+
+        my %triage_bucket_ids;
+        my (@header);
+        if ($opt_triage) {
+            @header = ("Bucket", "Count", "Bugs Filed", "Bucket Name");
+
+        } elsif ($opt_diff) {
+            @header = ("Bucket", "Count", "Status", "Bucket Name");
+
+            # Generate SQL to get current Triage bucket IDs based on user supplied criteria
+            my $sql = "";
+            my $gq = new HSDQuery;
+            $gq->openDB("hsd_phablet_tg") or &id_fatal("Unable to open connection to hsd_phablet HSD (" . $gq->getLastErrMsg() . ")\n");
+            if ($opt_query) {
+
+                # Get query SQL using supplied query name
+                my $sql2 = "SELECT query FROM usr_query WHERE usr_query.query_name = '$opt_query'";
+                $gq->execQuery($sql2) or &id_fatal("Query of usr_query failed (" . $gq->getLastErrMsg() . ")\n");
+                while ($gq->read()) {
+                    if ($sql eq "") {
+                        $sql = $gq->getVal("query");
+                    } else {
+                        &id_fatal("Found more than one query named '$opt_query'\n");
+                    }
+                }
+                if ($sql eq "") {
+                    &id_fatal("Did not find a query named '$opt_query'\n");
+                }
+
+                # usr_query has newlines and tons of stuff in the SELECT that will strip off
+                $sql =~ s/\n//g;
+                $sql =~ s/SELECT .*FROM/SELECT DISTINCT [bucket].[id] FROM/i;
+
+            } else {
+
+                # Get all production results based on command line criteria
+                $sql = "SELECT DISTINCT [bucket].[id] " .
+                    "FROM [result] with (nolock) " .
+                    "JOIN [bucket] with (nolock) " .
+                    "  ON [bucket].[id] = [result].[bucket_id] " .
+                    "  AND [result].[bucket_id] > 0 " .
+                    "WHERE [result].[status] = 'fail' " .
+                    "  AND ([result].[unique_tag] LIKE '%needs_debug%' ".
+                    "       OR [result].[unique_tag] like '%production%') ";
+                if ($opt_age) {
+                    $sql .= "  AND DATEDIFF (dd,result.date_run,getdate())<" . ($opt_age+1) . " ";
+                } else {
+                    $sql .= "  AND DATEDIFF (dd,result.date_run,getdate())<31 ";
+                }
+                if ($opt_dut) {
+                    $sql .= "  AND [result].[dut] = '$opt_dut' ";
+                }
+                if ($opt_model) {
+                    $sql .= "  AND [result].[model_version] = '$opt_model' ";
+                }
+                if ($opt_team) {
+                    $sql .= "  AND [result].[team] = '$opt_team' ";
+                }
+                if ($opt_unique_tag) {
+                    $sql .= "  AND [result].[unique_tag] LIKE '\%$opt_unique_tag\%' ";
+                }
+            }
+
+            # Get list of bucket IDs for this query
+            $gq->execQuery($sql) or &id_fatal("Query of result failed (" . $gq->getLastErrMsg() . ")\n");
+            while ($gq->read()) {
+                $triage_bucket_ids{$gq->getVal("id")}++;
+            }
+
+        } else {
+            @header = ("Bucket", "Count", "Bucket Name");
+
+        }
+
+        &init_xml_buckets(@header) if $opt_xml_buckets;
+
+        my @rows = ( );
+        foreach my $bucket_name (@sorted_buckets) {
+            my $b = $buckets{$bucket_name};
+
+            my ($data);
+            if ($opt_triage) {
+                my $bug_string = join(", ", sort keys %{$b->{'bugs'}});
+                $data = [ $b->{'id'}, scalar(@{$b->{'entries'}}), $bug_string,
+                          $bucket_name ];
+
+            } elsif ($opt_diff) {
+                my $status = 'new';
+                my $bucket_id = -1;
+                if ($bucket_name =~ /^\[\s*(\d+)\]/) {
+                    $bucket_id = $1;
+                }
+                if (exists $triage_bucket_ids{$bucket_id}) {
+                    $status = 'seen';
+                }
+                $data = [ $b->{'id'}, scalar(@{$b->{'entries'}}), $status, $bucket_name ];
+
+            } else {
+                $data = [ $b->{'id'}, scalar(@{$b->{'entries'}}), $bucket_name ];
+
+            }
+
+            push @rows, $data;
+            &add_xml_bucket($data) if $opt_xml_buckets;
+        }
+
+        &print_table(\@header, @rows);
+    }
+
+    sub print_bug_information
+    {
+        my @header = ("Bug ID", "Status", "Released Models", "Title");
+        my @rows = ();
+
+        my @bugs;
+        foreach my $bucket (keys (%buckets)) {
+            push(@bugs, keys %{$buckets{$bucket}->{'bugs'}});
+        }
+        my @sorted = sort &unique(@bugs);
+
+        foreach my $bug (@sorted) {
+            next if ($bug !~ m/^\d+$/);
+
+            my ($status, $title, $desc) = &get_bug_info($bug);
+
+            my @models = ();
+            while ($desc =~ m/GateKeeper: (Cluster|FC) Release (\S+)/g) {
+                my $model = $2;
+
+                if ($model =~ m/([^-]+)-ertl-$ENV{PROJECT}-(ph.-.+)/) {
+                    push @models, "$1-$2";
+
+                } else {
+                    push @models, $model;
+                }
+            }
+
+            my $models = join(", ", &unique(@models));
+            push @rows, [ $bug, $status, $models, $title ];
+        }
+
+        &print_table(\@header, @rows);
+    }
+
+    sub print_summary_information
+    {
+        ## HACK to accomodate restarted NB jobs
+        my $actual_total = $total;
+        if (($total - $pass - $fail) < 0) {
+            $actual_total = $pass + $fail;
+        }
+
+        my $pct;
+        if ($total == 0) {
+            $pct = "  0.0";
+        } else {
+            $pct = sprintf("  %.1f", $pass/$actual_total * 100);
+        }
+
+        my @header = ("Pass", "Fail", "No Status", "Total", "% Passing");
+        my @rows = ( [ $pass, $fail, $actual_total - $pass - $fail, $total, $pct ] );
+
+        &print_table(\@header, @rows);
+
+    }
+
+    sub print_table
+    {
+        my ($header, @rows) = @_;
+
+        my ($t_header, $t_divider, @t_rows) = &table($header, @rows);
+
+        print "$t_header\n$t_divider\n";
+        print(join("\n", @t_rows), "\n");
+    }
+
+    sub table
+    {
+        my ($header, @rows) = @_;
+        my $max_col = scalar(@$header) - 1;
+        our ($opt_l);
+
+        ## set up initial maximum field widths
+        my ($field);
+        my (@format_strings);
+        my (@max_len, @divider);
+
+        my ($i);
+        for ($i = 0; $i <= $max_col; $i++) {
+            $max_len[$i] = length($header->[$i]);
+
+            foreach my $row (@rows) {
+
+                ## remove any newlines from the data
+                $row->[$i] =~ s/\n/,/g;
+
+
+                $max_len[$i] = length($row->[$i])
+                    if (length($row->[$i]) > $max_len[$i]);
+            }
+        }
+
+        my $total_width = 0;
+        for ($i = 0; $i <= $max_col; $i++) {
+            $total_width += 1 + $max_len[$i];
+        }
+
+        $max_len[$max_col] = $term_cols - ($total_width - $max_len[$max_col])
+            if ($total_width > $term_cols);
+
+        for ($i = 0; $i <= $max_col; $i++) {
+            push @format_strings, "%-$max_len[$i]s";
+            push @divider, "-" x $max_len[$i];
+        }
+
+        my $format_string = join(" ", @format_strings);
+        my $header_string = sprintf($format_string, @$header);
+        my $divider_string = join(" ", @divider);
+
+        my ($wrapped_rows, @extra_rows, $wrap_prefix_len);
+        $Text::Wrap::columns = $term_cols;
+        $wrap_prefix_len = $term_cols - $max_len[$max_col] - 1;
+
+        my @row_strings = ();
+        foreach my $row (@rows) {
+            @extra_rows = ();
+
+            # trim leading whitespace
+            $row->[$max_col] =~ s/^\s+//;
+
+            ## truncate the last column to make it fit on the screen if necessary
+            if (length($row->[$max_col]) > $max_len[$max_col]) {
+
+                if (not $opt_l) {
+                    $row->[$max_col] =
+                        substr($row->[$max_col], 0, $max_len[$max_col] - 3) . "...";
+                } elsif (!$opt_nowrap) {
+                    # -long option wraps to the next line.
+                    $wrapped_rows = wrap(" " x $wrap_prefix_len, " " x $wrap_prefix_len, $row->[$max_col]);
+                    $wrapped_rows =~ s/^\s+//;
+                    @extra_rows = split "\n",  $wrapped_rows;
+                    $row->[$max_col] = shift @extra_rows;
+                }
+            }
+            push @row_strings, sprintf($format_string, @$row), @extra_rows;
+        }
+
+        return($header_string, $divider_string, @row_strings);
+    }
+
+sub compare
+    {
+        &id_fatal("[-compare] requires multiple arguments.")
+            if (scalar(@ARGV) < 2);
+
+        my @header = ("Test ID", "Test Name");
+        my @rpt_files = ();
+
+        my $cwd = &cwd();
+        foreach my $i (0 .. $#ARGV) {
+            my $rpt_file = $ARGV[$i];
+            printf "report file = $rpt_file\n";
+            $rpt_file = "$cwd/$rpt_file" if ($rpt_file !~ m|/|);
+
+            my $name = sprintf("Rpt %d", $i + 1);
+            if ($rpt_file =~ m|([^/]+)/([^/]+)$|) {
+                $name = $2;
+            }
+
+            &id_fatal("Unable to read [$rpt_file].") if (! -r $rpt_file);
+
+            $rpt_files[$i] = { };
+            $rpt_files[$i]->{'path'} = $rpt_file;
+            $rpt_files[$i]->{'data'} = &FileParser::read_rpt($rpt_file);
+            $rpt_files[$i]->{'name'} = $name;
+            $rpt_files[$i]->{'fail'} = 0;
+            $rpt_files[$i]->{'pass'} = 0;
+            $rpt_files[$i]->{'<no status>'} = 0;
+
+            my %rpt_data = ();
+            foreach my $t (@{$rpt_files[$i]->{'data'}}) {
+                &id_fatal("Record in [$rpt_file] does not have Test ID.")
+                    if (! exists $t->{'TEST ID'});
+
+                $rpt_data{$t->{'TEST ID'}} = $t;
+            }
+
+            $rpt_files[$i]->{'byid'} = \%rpt_data;
+            push @header, $rpt_files[$i]->{'name'};
+        }
+
+        ## get a comprehensive list of all tests
+        my %tests = ();
+        foreach my $rpt (@rpt_files) {
+            foreach my $id (keys(%{$rpt->{'byid'}})) {
+                $tests{$id} = $rpt->{'byid'}->{$id}->{'TEST NAME'};
+            }
+        }
+
+        my %test_score = ();
+        foreach my $tid (keys(%tests)) {
+            foreach my $rpt (@rpt_files) {
+
+                $rpt->{'byid'}->{$tid}->{'TEST STATUS'} = "<no status>"
+                    if (! exists $rpt->{'byid'}->{$tid});
+
+                my $status = $rpt->{'byid'}->{$tid}->{'TEST STATUS'};
+
+                $test_score{$tid} += 1 if ($status eq "PASS");
+                $test_score{$tid} += 0.5 if ($status eq "FAIL");
+                $test_score{$tid} += 0 if ($status eq "<no status>");
+
+                $rpt->{lc($status)}++;
+            }
+        }
+
+
+        my @sorted = sort {
+            $test_score{$b} <=> $test_score{$a};
+        } keys(%tests);
+
+        my @rows = ();
+        foreach my $tid (@sorted) {
+            my @row = ($tid, $tests{$tid});
+
+            foreach my $r (@rpt_files) {
+                push @row, $r->{'byid'}->{$tid}->{'TEST STATUS'};
+            }
+
+            push @rows, \@row;
+        }
+
+        my ($f_header, $f_divider, @f_rows) = &Output::table(\@header, @rows);
+        printf("$f_header\n");
+        printf("$f_divider\n");
+        foreach my $r (@f_rows) {
+            printf("$r\n");
+        }
+
+        print("\n\n");
+        @header = ("Report File Name", "Pass", "Fail", "<no status>");
+        @rows = ();
+        foreach my $rpt (@rpt_files) {
+            push @rows, [ $rpt->{'name'}, $rpt->{'pass'}, $rpt->{'fail'},
+                          $rpt->{'<no status>'} ];
+        }
+
+        ($f_header, $f_divider, @f_rows) = &Output::table(\@header, @rows);
+        printf("$f_header\n");
+        printf("$f_divider\n");
+        foreach my $r (@f_rows) {
+            printf("$r\n");
+        }
+    }
+
+##
+## print out summary stats for one or many .rpt files. For example:
+##
+## regression                   pass fail not complete idle
+## ---------------------------- ---- ---- ------------ ------
+## exe/level0.list/level0.rpt   17   0    0            3h 18m
+## fe/level0.list/level0.rpt    70   0    0            2h 57m
+## meu/level0.list/level0.rpt   19   0    0            2h 32m
+## ooo/level0.list/level0.rpt   54   0    0            2h 27m
+## sys/level0.list/level0.rpt   4    0    0            32m
+## ucode/level0.list/level0.rpt 100  0    0            2h 5m
+## unsys/level0.list/level0.rpt 2    0    0            2h 14m
+## sys/level1.list/level1.rpt   0    0    56           30m
+##
+
+sub summary
+    {
+        my @rpt = @_;
+
+        if (! scalar(@rpt) || (-d $rpt[0] && chdir($rpt[0]))) {
+
+            ## check to see if we're in a model, and redirect any error messages
+            ## to /dev/null.
+            my $model_root = `git root 2> /dev/null`;
+
+            if ($?) {
+                @rpt = `find . -follow -maxdepth 4 -name '*.rpt' -o -name 'job*.xml' -o -name 'ifeed.log'`;
+            } else {
+                chomp($model_root);
+                chdir("$model_root/regression")
+                    || die "Unable to chdir to [$model_root/regression].\n";
+
+                ## find ifeed.log files in the regression directory
+                @rpt = `find . -name 'ifeed.log'`;
+
+            }
+        }
+
+
+        map { s|^\./||; chomp; } @rpt;
+
+        my $cwd = getcwd;
+        &id_status("Processing [" . scalar(@rpt) . "] report files under $cwd/\n");
+
+        my @header = ("regression", "pass", "fail", "not complete", "idle");
+        my @all = ();
+        my @not_passing = ();
+
+        my @sorted_rpt = sort {
+            (stat($a))[9] <=> (stat($b))[9];
+        } @rpt;
+
+        foreach my $rpt (@sorted_rpt) {
+            my ($data, $summary) = &FileParser::read_file($rpt);
+            next if (! exists $summary->{'TOTAL TESTS'});
+            my $total = $summary->{'TOTAL TESTS'};
+            my @pass = grep { $_->{'TEST STATUS'} eq "PASS"; } @$data;
+            my @fail = grep { $_->{'TEST STATUS'} eq "FAIL"; } @$data;
+
+            my $pass = scalar(@pass);
+            my $fail = scalar(@fail);
+            my $not_done = $total - $pass - $fail;
+
+            ## come up with an idle time for the .rpt file, based on its
+            ## modification timestamp.
+            my $mod_time = (stat($rpt))[9];
+            my $idle = int((time - $mod_time) / 60);
+
+            if ($idle > 59) {
+                $idle = sprintf("%dh %dm", int($idle / 60), $idle % 60);
+
+            } else {
+                $idle = "${idle}m";
+            }
+
+            my $row = [ $rpt, $pass, $fail, $not_done, $idle ];
+
+            push(@all, $row);
+            push(@not_passing, $row) if ($not_done || $fail);
+        }
+
+        ## if '-f' was specified, then don't print the .rpt files that are
+        ## 100% passing
+
+        if ($opt_f) {
+            &Output::print_table(\@header, @not_passing);
+
+        } else {
+            &Output::print_table(\@header, @all);
+        }
+    }
+
+
+sub init_xml_tests
+    {
+        my ($headers, @results) = @_;
+
+        if ($opt_xml_tests_cfg) {
+            -e $opt_xml_tests_cfg || die "Could not fine $opt_xml_tests_cfg\n";
+            my $in_xml = new XML::Simple;
+            $xml_tests_data = $in_xml->XMLin($opt_xml_tests_cfg);
+        }
+
+        $xml_tests_data->{'Type'} = "General";
+        $xml_tests_data->{'Rows'} = { 'Row' => [] };
+        $xml_tests_data->{'Headers'} = ();
+        my %header_hash;
+        foreach my $header (@{$headers}) {
+            my $length = length($header);
+            my $name = $header;
+            $name = "Test_name" if $header =~ "Test Name";
+            my %col = (
+                'Name'=>"$name",
+                'Type'=>"String",
+                'InitialSize' => $length,
+                'content' =>"$header"
+            );
+            push (@{$header_hash{Header}}, \%col);
+        }
+        foreach my $header (@results) {
+            next if ($header =~ /TEST ID/ || $header =~ /RESULT ID/ || $header =~ /RESULTS DIR/ ||
+                         $header =~ /bucket/ || $header =~ /CYCLES/ || $header =~ /TEST STATUS/ || $header =~ /TEST RESULT/);
+            my $length = length($header);
+            my $name = $header;
+            $name = "Trex_args" if $header eq "TEST CMD-LINE";
+            $name = "Seed" if $header eq "SEED";
+            my %col = (
+                'Name'=>"$name",
+                'Type'=>"String",
+                'InitialSize' => $length,
+                'content' =>"$header"
+            );
+            push (@{$header_hash{Header}}, \%col);
+        }
+        push (@{$xml_tests_data->{Headers}}, \%header_hash);
+        my %header_filter = ('HeaderName' => 'Bucket', 'Filter' => []);
+        $xml_tests_data->{'HeaderFilters'} = {'HeaderFilter' => []};
+        push (@{$xml_tests_data->{'HeaderFilters'}{'HeaderFilter'}}, \%header_filter)
+    }
+
+sub init_xml_buckets
+    {
+        my @headers = @_;
+        $xml_buckets_data->{'Type'} = "General";
+        $xml_buckets_data->{'Rows'} = { 'Row' => [] };
+        $xml_buckets_data->{'Headers'} = ();
+        my %header_hash;
+        foreach my $header (@headers) {
+            my $length = length($header);
+            my %col = (
+                'Name'=>"$header",
+                'Type'=>"String",
+                'InitialSize' => $length,
+                'content' =>"$header"
+            );
+            push (@{$header_hash{Header}}, \%col);
+        }
+        push (@{$xml_buckets_data->{Headers}}, \%header_hash);
+        $max_bucket_size = 10;
+    }
+
+sub add_xml_test
+    {
+        my ($header, $data, $test) = @_;
+        my @cols;
+        for (my $i = 0 ; $i < scalar(@{$header}) ; $i++) {
+            push (@cols, "$data->[$i]");
+        }
+        foreach my $key (keys %{$test}) {
+            next if ($key =~ /TEST ID/ || $key =~ /RESULT ID/ || $key =~ /RESULTS DIR/ ||
+                         $key =~ /bucket/ || $key =~ /CYCLES/ || $key =~ /TEST STATUS/ || $key =~ /TEST RESULT/);
+            push (@cols, "$test->{$key}");
+        }
+
+        my $color = ($test->{'TEST STATUS'} eq "PASS") ? "#76EE00" : "#FF6347";
+        my %row_hash = ( 'BackgroundColor' => "$color", 'Column' => \@cols );
+        push (@{$xml_tests_data->{Rows}{Row}}, \%row_hash);
+    }
+
+
+sub add_xml_bucket
+    {
+        my $data = shift;
+        my @cols;
+        for (my $i = 0 ; $i < scalar(@{$data}) ; $i++) {
+            push (@cols, "$data->[$i]");
+        }
+        my $curr_len = length($data->[scalar(@{$data}) - 1]);
+        $max_bucket_size = ($max_bucket_size < $curr_len) ? $curr_len : $max_bucket_size;
+        my %row_hash = ('Column' => \@cols );
+        push (@{$xml_buckets_data->{Rows}{Row}}, \%row_hash);
+
+        my %bucket_filter = ( 'Title'=>"$data->[0]", 'FindWhat'=>"(^|,)$data->[0](\$|,)", 'MatchCase'=>"Yes", 'RegularExpression'=>'Yes');
+        push (@{$xml_tests_data->{'HeaderFilters'}{'HeaderFilter'}[0]{'Filter'}}, \%bucket_filter);
+    }
+
+
+sub print_xml_data
+    {
+        if ($opt_xml_tests) {
+            open (FD, ">$opt_xml_tests") || die ("-F- Failed to open $opt_xml_tests for writing.\n");
+            my $xs = new XML::Simple(keeproot => 1,searchpath => ".",Forcearray => 1, RootName => 'XMLTable');
+            my $xml = $xs->XMLout($xml_tests_data);
+            print FD $xml;
+            close FD;
+        }
+        if ($opt_xml_buckets) {
+            my $pos = scalar(@{$xml_buckets_data->{Headers}[0]{Header}});
+            $xml_buckets_data->{Headers}[0]{Header}[$pos -1]{InitialSize} = $max_bucket_size;
+            open (FD, ">$opt_xml_buckets") || die ("-F- Failed to open $opt_xml_buckets for writing.\n");
+            my $xs = new XML::Simple(keeproot => 1,searchpath => ".",Forcearray => 1, RootName => 'XMLTable');
+            my $xml = $xs->XMLout($xml_buckets_data);
+            print FD $xml;
+            close FD;
+        }
+
+    }
+
+    sub trim
+    {
+        map { s/^\s+//; s/\s+$//; } @_;
+    }
+
+sub unique
+    {
+        my (%seen);
+
+        map { $seen{$_} = 1 } @_;
+        return(keys(%seen));
+    }
+
+sub get_bug_info
+    {
+        my ($id) = @_;
+
+        my $bug = $db->query('query' => [ 'bug.id', '=', $id ],
+                             'retrieve' => [ 'bug.title', 'bug.status', 'bug.description' ],
+                             'focus' => 'bug');
+
+        my $title = $bug->[0]->get("bug.title");
+        my $status = $bug->[0]->get("bug.status");
+        my $desc = $bug->[0]->get("bug.description");
+
+        return($status, $title, $desc);
+    }
+
+sub help
+    {
+        print <<EOHELP;
+
+    lsti -- Less Sucky TestInfo
+
+    Contact Sam Huffman <shuffman\@ichips.intel.com> with any comments,
+    suggestions, or bugs. Complaints about the acronym will be ignored.
+
+    Supported Options:
+    -triage
+       Provide Triage information about the regression results, based
+       on a regression id (-rgr_id) used to query HSD.
+
+    -rgr_id <id>
+       Query HSD to get the results information for regressid id <id>
+       (normally appears at the top of the list file when created with
+        avtestrun)
+
+    -t2 (triage type 2)
+       Provide Triage information about the regression results, based
+       on the result ids from the report file.
+
+    -bf <bucket file>
+       Specify an alternate bucket file. The default is
+       $ENV{VALID_ROOT}/av/lib/avtb_buckets.pl.
+
+    -compare <rpt1> <rpt2> <rpt3>
+       Compare results from multiple report files. The tests in the
+       report files _must_ contain TEST IDs, because this field is used
+       to cross-reference tests.
+
+    -s[ummary]
+       If .rpt files are specified, print a brief summary of all tests
+       run within those .rpt files. If run from within an RTL model,
+       summarize the test results from the \$MODEL_ROOT/regression
+       directory. Otherwise search for regression .rpt files recursively
+       below the current directory, and summarize those.
+
+       The summary includes a column "idle", which reports the number of
+       minutes elapsed since the .rpt file was updated. This may be
+       helpful for determining if a regression is making forward progress.
+
+    -f[ail]
+       Only display tests that failed.
+
+    -l[ong]
+       Display entire bucket description.
+
+    -a[cemodel]
+              Print the Ace model the test ran on.
+
+    -v[erbose]
+       Only applicable to Migi report files, this switch will generate
+       output lines for each stream in a failing test. Passing tests will
+       still only list the 1 line. For failing tests, the result dir column
+       changes to a result dir followed by a stream name, as in:
+
+        Test ID Result ID Result Dir  Test Name        Cycles Status Bucket
+        ------- --------- ----------- ---------------  ------ ------ ------
+        14                rgr_run/    test_1/stream_1  278764 FAIL   1
+                                      test_1/stream_2  278764 FAIL   1
+                                      test_2/stream_1  278764 FAIL   1
+                                      test_2/stream_2  278764 FAIL   1
+        Bucket Count Bucket Name
+        ------ ----- -------------------------------------------------
+        1      4     Checker mismatch
+
+      Note that this skews the bucket counting, as each stream is counted
+      as a separate instance of that bucket signature string.
+
+    -diff
+      Compares buckets to recent production failures currently in Triage.
+      Adds a "Status" column to the bucket listing with one of the following:
+        new:  Bucket is new and not being hit in production Triage failures.
+        seen: Bucket has neem seen in Triage production failures.
+
+    -age <DAYS>
+      Used along with -diff. Compares bucket names to those that are in
+      production Triage results from the past <DAYS> days. Default is to look
+      at failures from past 30 days. Example: -age 60
+
+    -dut <DUT>
+      Used along with -diff. Compares bucket names to those that are in
+      production Triage results for <DUT>. Default is to look at failures
+      for all DUTs. Example: -dut uncore_te
+
+    -model <MODELVER>
+      Used along with -diff. Compares bucket names to those that are in
+      production Triage results for model <MODELVER>. Default is to look at
+      failures from all models. Example: -model uncore-ertl-hsw-a0-10ww51a
+
+    -team <TEAM>
+      Used along with -diff. Compares bucket names to those that are in
+      production Triage results for team <TEAM>. Default is to look at
+      failures for all teams. Example: -team val.uav.pcie
+
+    -unique_tag <TAG>
+      Used along with -diff. Compares bucket names to those that are in
+      production Triage results with unique_tag <TAG>. Default is just to
+      look for production results (i.e. unique_tag contains "production" or
+      "needs_debug"). Example: -unique_tag level2
+
+    -query <QUERYNAME>
+      Used along with -diff. Compares bucket names to those that are in the
+      Triage query <QUERYNAME>. Default is to look at all production failures
+      from past 30 days. Example: -query "MSA, SA, UNCORE: Level 2 (14 days)"
+
+EOHELP
+
+    }
+
