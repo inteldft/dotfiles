@@ -46,6 +46,9 @@ bin/fzf:bin/fzf
 bin/fzf-tmux:bin/fzf-tmux
 bin/diskhogs:bin/diskhogs
 bin/verdiwaves:bin/verdiwaves
+bin/ep:bin/ep
+bin/tp:bin/tp
+bin/clipboard:bin/clipboard
 pygments/pygmentize:bin/pygmentize
 scripts/perl_cmd_line.pl:scripts/perl_cmd_line.pl
 
