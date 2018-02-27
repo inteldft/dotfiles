@@ -137,7 +137,6 @@ sub extract_aliases {
         $val =~ s/setenv\s+(\w+)/&$setenv/eg;
         $val =~ s/unsetenv/$unset/g;
         $val =~ s/source\s+(.*?)\s*(;|$)/eval $eval_char(csh-source -inline -alias $1)$2/gm;    # source tcsh scripts
-        # if alias contains paramters, translate to bash function
 
         if ($opt{shell_type} eq 'fish') {
             $val =~ s/![*]/\$argv/g;                  # !*   => $argv
@@ -145,13 +144,12 @@ sub extract_aliases {
             $val =~ s/!:(\d+)/\$argv[$1]/g;           # !:1  => $argv[1]
             $val =~ s/\s*[&]{2}/; and/g;              # &&   => and
             $val =~ s/\s*[|]{2}/; or/g;               # ||   => or
-        }
-        elsif (
-            $val =~ s/![*]/\$\@/g            or    # !*   => $@
-            $val =~ s/!:(\d+)[*]/\${\@:$1}/g or    # !:2* => ${@:2}
-            $val =~ s/!:(\d+)/\$$1/g               # !:1  => $1
-            )
-        {
+        } elsif ($val =~ /!(?:[*]|:\d)/) {
+            # if alias contains paramters, translate to bash function
+            $val =~ s/![*]/\$\@/g;               # !*   => $@
+            $val =~ s/!:(\d+)[*]/\${\@:$1}/g;    # !:2* => ${@:2}
+            $val =~ s/!:(\d+)/\$$1/g;            # !:1  => $1
+
             $new_func{$alias} = $val;
             return;
         }
@@ -201,6 +199,8 @@ sub apply_env {
         } elsif ($inline) {
             if ($opt{shell_type} eq 'fish') {
                 print "set -x $var \"$new_val\";\n";
+            } elsif ($opt{shell_type} eq 'eshell') {
+                print "(setenv \"$var\" \"$new_val\")\n";
             } else {
                 print "export $var=\"$new_val\";\n";
             }
@@ -229,10 +229,12 @@ sub apply_env {
                     } else {
                         print "set -x $var \"$new_val\";\n";
                     }
+                } elsif ($opt{shell_type} eq 'eshell') {
+                    print "(setenv \"$var\" \"$new_val\")\n";
                 } else {
                     print "export $var=\"$new_val\";\n";
+                }
             }
-        }
         } else {
             $ENV{$var} = $new_val;
         }
@@ -245,11 +247,12 @@ sub apply_env {
 
 # process needed aliases
 sub process_aliases {
-    foreach my $alias (keys %new_alias) {
-        print "alias $alias='$new_alias{$alias}';\n" if ($opt{inline});
+    while (my ($alias, $def) = each %new_alias) {
+        print "alias $alias='$def';\n" if ($opt{inline});
     }
-    foreach my $func (keys %new_func) {
-        print "$func() { $new_func{$func}; };\n" if ($opt{inline});
+    while (my ($func, $def) = each %new_func) {
+        $def .= ($def =~ /;$/) ? q{} : q{;}; # add a semicolon if not present
+        print "$func() { $def };\n" if ($opt{inline});
     }
     return;
 }
