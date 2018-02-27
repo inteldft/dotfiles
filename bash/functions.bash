@@ -71,7 +71,8 @@ rm-old () {
         return
     fi
     echo "Removing files older than $1 day(s) in ${2-cwd}"
-    find "${2:-.}" -ctime +"$1" -exec rm -rf {} +
+    find "${2:-.}" -maxdepth 1 -ctime +"$1" -exec rm -rf {} \;
+    # find "${2:-.}" -maxdepth 1 -ctime +"$1" | xargs rm -rf
 }
 
 mdcd () {
@@ -142,15 +143,46 @@ if [[ $EC_SITE == 'sc' ]]; then
         fi
 
         if [[ ! $RTL_PROJ_LIB ]]; then
-            echo "Error: need to source dev enviroment first (srcenv)"
+            srcenv
+        fi
+
+        export XWEAVE=$MODEL_ROOT/tools/ipgen/${1}/output/xweave/design_report.json
+        if [[ -f $XWEAVE ]]; then
+            export STF_SPFSPEC=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.stf.spfspec
+            export TAP_SPFSPEC=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.tap.spfspec
+            export TAP2STF_MAP_FILE=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.tap2stf.map
+            XWEAVE_REPO_ROOT=$(whichip ipconfig/xweave)
+            export XWEAVE_REPO_ROOT
+        else # wave 3 collateral locations
+            export STF_SPFSPEC=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/spf/${1}.stf.spfspec
+            export TAP_SPFSPEC=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/spf/${1}.tap.spfspec
+            export TAP2STF_MAP_FILE=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/spf/${1}.tap2stf.map
+            export XWEAVE=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/xweave/design_report.json
+        fi
+        export REGLIST_DIR=$MODEL_ROOT/verif/reglist/${1}/dft
+        export ESPF_DIR=${ESPF_DIR-${HOME}/workspace/chassis_dft_val_global/spf_sequences.1p0/scan}
+        export DFT_GLOBAL_DIR=${DFT_GLOBAL_DIR-${HOME}/workspace/chassis_dft_val_global}
+        if [[ $LD_LIBRARY_PATH ]];  then
+            unset LD_LIBRARY_PATH
+        fi
+        srcspf
+
+    }
+
+    setsnrvars () {
+        if [[ ! $1 ]]; then
+            echo "Error: Need to provide a model to set dft variables"
             return
         fi
 
-        export STF_SPFSPEC=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.stf.spfspec
-        export TAP_SPFSPEC=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.tap.spfspec
-        export TAP2STF_MAP_FILE=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.tap2stf.map
-        export XWEAVE=$MODEL_ROOT/tools/ipgen/${1}/output/xweave/design_report.json
-        export REGLIST_DIR=$MODEL_ROOT/verif/reglist/${1}/dft
+        if [[ ! $RTL_PROJ_LIB ]]; then
+            srcenv
+        fi
+
+        export STF_SPFSPEC=$MODEL_ROOT/subIP/snr/dft_ipgen_snr/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.stf.spfspec
+        export TAP_SPFSPEC=$MODEL_ROOT/subIP/snr/dft_ipgen_snr/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.tap.spfspec
+        export TAP2STF_MAP_FILE=$MODEL_ROOT/subIP/snr/dft_ipgen_snr/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.tap2stf.map
+        export XWEAVE=$MODEL_ROOT/subIP/snr/dft_ipgen_snr/tools/ipgen/${1}/output/xweave/design_report.json
         export ESPF_DIR=${ESPF_DIR-${HOME}/workspace/chassis_dft_val_global/spf_sequences.1p0/scan}
         export DFT_GLOBAL_DIR=${DFT_GLOBAL_DIR-${HOME}/workspace/chassis_dft_val_global}
         XWEAVE_REPO_ROOT=$(whichip ipconfig/xweave)
@@ -176,8 +208,7 @@ if [[ $EC_SITE == 'sc' ]]; then
 else
     setdftvars () {
         if [[ ! $RTL_PROJ_LIB ]]; then
-            echo "Error: need to source dev enviroment first (srcenv)"
-            return
+            srcenv
         fi
 
         export STF_SPFSPEC=$MODEL_ROOT/verif/tests/JTAG_BFM_CTT_files/spf/dnv.stf.spfspec
@@ -206,8 +237,7 @@ if [[ $EC_SITE == 'sc' || $EC_SITE == 'pdx' ]]; then
         fi
 
         if [[ ! $RTL_PROJ_LIB ]]; then
-            echo "Error: need to source dev enviroment first (srcenv)"
-            return
+            srcenv
         fi
 
         if [[ $3 ]]; then
@@ -231,7 +261,7 @@ if [[ $EC_SITE == 'sc' || $EC_SITE == 'pdx' ]]; then
         fi
 
         if [[ ! $RTL_PROJ_LIB ]]; then
-            echo "Error: need to source dev enviroment first (srcenv)"
+            srcenv
             return
         fi
 
@@ -250,17 +280,21 @@ if [[ $EC_SITE == 'sc' || $EC_SITE == 'pdx' ]]; then
     }
 
     waves () {
-        if (( $# < 3 )); then
-            echo "Error: must specify dut, model, and fsdb file to pull up waves"
+        if (( $# < 2 )); then
+            echo "Error: must specify dut and model to pull up waves"
             return
         fi
 
         if [[ ! $RTL_PROJ_BIN ]]; then
-            echo "Error: need to source dev enviroment first (srcenv)"
-            return
+            srcenv
         fi
 
-        verdiwaves -dut "$1" -m "$2" -f "$3" "${@:4}"
+        local fsdb=()
+        if [[ $3 ]]; then
+            fsdb=(-f $3)
+        fi
+
+        verdiwaves -dut "$1" -m "$2" "${fsdb[@]}" "${@:4}"
     }
 
     reg () {
@@ -271,20 +305,19 @@ if [[ $EC_SITE == 'sc' || $EC_SITE == 'pdx' ]]; then
         fi
 
         if [[ ! $RTL_PROJ_BIN ]]; then
-            echo "Error: need to source dev enviroment first (srcenv)"
-            return
+            srcenv
         fi
 
-        if [[ ! -w $MODEL_ROOT ]] && (( $# < 4 )); then
-            echo "Error: must specify result directory when running on remote models"
-            return
-        fi
+        # if [[ ! -w $MODEL_ROOT ]] && (( $# < 4 )); then
+        #     echo "Error: must specify result directory when running on remote models"
+        #     return
+        # fi
 
         if [[ $4 ]]; then
             local test_dir="-test_results $4"
         fi
 
-        local command="simregress -dut $1 -model $2 -l $3 -trex -save -trex- -net -P ${EC_SITE}_critical -Q /SDG/sdg74/fe/build/chassis $test_dir"
+        local command="simregress -dut $1 -model $2 -l $3 -save -net -P ${EC_SITE}_critical -Q /SDG/sdg74/fe/build/chassis -C 'SLES11SP4&&32G' $test_dir"
         echo "$command"
         eval "$command"
     }
@@ -299,5 +332,3 @@ elif [[ $EC_SITE == 'fc' ]]; then
         acesh -dut dnv "dve -vpd $PWD/soc_tb.vpd"
     }
 fi
-
-
