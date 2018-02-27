@@ -29,6 +29,7 @@ exclude_functions = print say
 
 [Subroutines::RequireArgUnpacking]
 short_subroutine_statements = 2
+allow_delegation_to = unpack_hash_arg
 
 [ValuesAndExpressions::ProhibitInterpolationOfLiterals]
 allow_if_string_contains_single_quote = 1
@@ -37,7 +38,7 @@ allow_if_string_contains_single_quote = 1
 allow = $0 $! ${^CHILD_ERROR_NATIVE}
 
 [Variables::RequireLocalizedPunctuationVars]
-allow = %ENV
+allow = %ENV %SIG
 
 [TestingAndDebugging::ProhibitNoWarnings]
 allow = qw once
@@ -59,6 +60,7 @@ script_sections = NAME | USAGE    | DESCRIPTION | COPYRIGHT
 [-InputOutput::RequireCheckedClose]
 
 [-Modules::RequireVersionVar]
+[-Modules::ProhibitAutomaticExportation]
 
 [-RegularExpressions::ProhibitEnumeratedClasses]
 [-RegularExpressions::RequireDotMatchAnything]

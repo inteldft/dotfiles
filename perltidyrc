@@ -16,6 +16,7 @@
 --brace-tightness=1            # 1
 --square-bracket-tightness=1   # 1
 --block-brace-tightness=0      # 0
+--cuddled-else                 # false
 
 #other
 --nospace-for-semicolon          # false
@@ -24,4 +25,4 @@
 --variable-maximum-line-length # not supported in the 2009 version of perltidy
 
 # minmal config
-# -l=130 -ci=4 -pt=2 -boc -vmll
+# -l=130 -ci=4 -pt=2 -boc -vmll -ce
