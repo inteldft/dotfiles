@@ -1,0 +1,127 @@
+#!/usr/intel/pkgs/perl/5.14.1/bin/perl
+use Env;
+use Getopt::Long;
+use IO::Handle qw{autoflush};
+use feature qw{say};
+
+use strict;
+use warnings;
+
+BEGIN {
+    die "\n-E- Please source SPF environment!\n\n"
+        unless exists $ENV{SPF_PERL_LIB};
+}
+
+STDOUT->autoflush(1);
+
+if (not defined $ENV{SOC_ROOT}) {
+    if (not defined $ENV{MODEL_ROOT}) {
+        die "\n-E-\$MODEL_ROOT and \$SOC_ROOT unset!\n\n";
+    } else {
+        $ENV{SOC_ROOT} = $ENV{MODEL_ROOT};
+    }
+}
+
+my @cmd_opts = qw(regex=s);
+my %options = ();
+GetOptions(\%options, @cmd_opts);
+$options{regex} = q{.*} if (! defined $options{regex});
+
+say "regex = $options{regex}";
+my $output_basename = 'conversion_spf2itpp';
+my $spfdir = 'source_spf';
+my $itppdir = 'itpp';
+my $tapspfspec = "$ENV{SOC_ROOT}/verif/tests/JTAG_BFM_CTT_files/spf/dnv.tap.spfspec";
+my $stfspfspec = "$ENV{SOC_ROOT}/verif/tests/JTAG_BFM_CTT_files/spf/dnv.stf.spfspec";
+my $template = "$ENV{SOC_ROOT}/verif/tests/dft/cdf.template";
+my @spf = ();
+my @pass = ();
+my @fail = ();
+my %failsig = ();
+my %itpp_exists = (); ## using hash to make sure we don't have multiple source files that generate the same .itpp target file
+print "\n\n$0 - \n";
+find_all_spf($spfdir);
+
+my $skip_for_now_regex = 'a^'; # matches nothing
+#my $skip_for_now_regex = 'scan_(bt|aunit|csmea|csmeb|psf0|repcluster|psf2|pcie1_phy|usb|pcc|psf3|pcie0_phy|psf1)_proxy_capture';
+#print "\nWARNING - skipping a few scan tests until capture data is lengthened for larger compression ratios\n";
+#print "WARNING - skipping tests that match this regex: $skip_for_now_regex\n";
+
+foreach my $spf (@spf) {
+    next unless ($spf =~ /$options{regex}/);
+    next if (skip_for_now($spf));
+    print q{.};
+    my $itpp;
+    if ($spf =~ /\/([\w.]+)$/) {
+        $itpp = $1;
+    }
+    $itpp =~ s/[.]spf$/.itpp/;
+    my $rc = system_call_and_rc("$ENV{SPF_ROOT}/bin/spf --tapSpecFile $tapspfspec --stfSpecFile $stfspfspec --testSeqFile $spf --templateFile=$template --itppFile $itppdir/$itpp >> $output_basename.stdout");
+    if ($rc) {                  ## uh oh, had a problem
+        push @fail, $spf;
+    } else {
+        push @pass, $spf;
+    }
+    if ($itpp_exists{$itpp}) {
+        print "error - itpp $itpp already exists\n";
+    }
+    $itpp_exists{$itpp} = 1;
+}
+
+print "\nDone.  Pass=", scalar(@pass), '  Fail=', scalar(@fail), "\n\n";
+open( my $pass_fh, '>',"$output_basename.pass") || die "Failed to open $output_basename.pass\n";
+foreach my $spf (@pass) {
+    print {$pass_fh} "$spf\n";
+}
+close($pass_fh);
+
+open(my $fail_fh, '>', "$output_basename.fail") || die "Failed to open $output_basename.fail\n";
+foreach my $spf (@fail) {
+    print {$fail_fh} "$spf\n";
+}
+close($fail_fh);
+
+open(my $log_fh, '>', "$output_basename.log") || die "Failed to open $output_basename.log: $!\n";
+foreach my $spf (@fail) {
+    print {$log_fh} "\n========================================\nSPF_SOURCE_FILE = $spf\n$failsig{$spf}\n";
+}
+close($log_fh);
+
+if (scalar(@pass) == 0) {
+    print "\nERROR - no tests successfully converted.  Check your spfspec or -regex\n\n";
+    exit 1;
+}
+exit scalar(@fail);
+
+sub find_all_spf {
+    my ($dir) = @_;
+    opendir (DIR, "$dir") || print "Failed to open DIR=$dir\n";
+    my (@list) = grep { !/^[.]{1,2}?$/ } readdir(DIR);
+    closedir (DIR);
+    foreach my $entry (@list) {
+        if (-d "$dir/$entry") {
+            find_all_spf("$dir/$entry");
+        } elsif ($entry =~ /[.]spf$/) {
+            push @spf, "$dir/$entry";
+        }
+    }
+    return;
+}
+
+sub skip_for_now {
+    my ($spf) = @_;
+    return 1 if ($spf =~ /$skip_for_now_regex/);
+    return 0;
+}
+
+sub system_call_and_rc {
+    my ($system, $nofail) = @_;
+    my $rc = 0xffff & system($system);
+    if ($rc == 0 || (defined $nofail && $nofail == 1)) {
+        ## yeah, it passed
+    } else {
+        print "$0 failed on call: $system\n";
+        ##    exit;
+    }
+    return $rc;
+}

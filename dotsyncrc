@@ -49,7 +49,6 @@ bin/ep:bin/ep
 bin/tp:bin/tp
 bin/clipboard:bin/clipboard
 pygments/pygmentize:bin/pygmentize
-scripts/perl_cmd_line.pl:scripts/perl_cmd_line.pl
 
 # directories
 bash
@@ -57,6 +56,7 @@ bash-it
 emacs.d
 tmux
 fonts
+scripts/scripts
 man:.local/share/man
 theme/base16-shell:.config/base16-shell
 theme/base16-gnome-terminal:.config/base16-gnome-terminal
