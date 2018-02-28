@@ -30,9 +30,16 @@ perlcriticrc
 perltidyrc
 profile.tjhinckl
 tmux.conf
+htoprc
 toprc
 fzf.bash
 fzf
+agignore
+aspell.en.prepl
+aspell.en.pws
+curlrc
+plsense
+
 
 # bin files
 bin/get-root:bin/get-root
@@ -56,6 +63,7 @@ bash-it
 emacs.d
 tmux
 fonts
+meld
 scripts/scripts
 man:.local/share/man
 theme/base16-shell:.config/base16-shell

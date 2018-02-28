@@ -1,0 +1,5 @@
+cachedir=/nfs/site/home/tjhinckl/.plsense.d
+clean-env=0
+logfile=/tmp/plsense.log
+perl=/usr/intel/pkgs/perl/5.14.1/bin/perl
+lib-path=/p/hdk/cad/spf/latest/lib/perl5,/p/hdk/rtl/ip_releases/shdk74/xweave/v17ww43a/lib/perl5,/p/hdk/rtl/cad/x86-64_linux26/dteg/ideas_shell/0.15.1/ISC/perl,/nfs/site/home/tjhinckl/perl5/lib/perl5
