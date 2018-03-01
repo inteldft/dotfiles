@@ -64,7 +64,7 @@ emacs.d
 tmux
 fonts
 meld
-scripts/scripts
+scripts:scripts
 man:.local/share/man
 theme/base16-shell:.config/base16-shell
 theme/base16-gnome-terminal:.config/base16-gnome-terminal
