@@ -34,16 +34,13 @@
 [color]
 	ui = auto
 [core]
-	pager = less -MIRFXS
 	preloadindex = true
 	sharedrepository = 0640
 [diff]
 	mnemonicprefix = true
 	renames = true
 [http]
-	proxy = http://proxy.sc.intel.com:911
-[https]
-	proxy = http://proxy.sc.intel.com:911
+	proxy = https://proxy-chain.intel.com:912
 [intel]
 	clone-minimum-free-kb = 10485760
 	userInitVersion = 2
