@@ -1,0 +1,186 @@
+#VERSION 1.1
+#REGEX-SYNTAX egrep
+# Above 2 lines are required for compatibility w/ssh version 6.x
+# while both 6.x and 7.x may exist during 7.x deployment.
+# These must be placed at the beginning of the file.
+#
+#
+# EC Standard Login Environment
+# user .ssh2/ssh2_config
+# $Source: /tmp/repos/cvs/ec_environ-1.0/release/user/ssh2/ssh2_config,v $
+# $Revision: 1356 $
+#
+# ECLogin ssh2_config template version 1.0
+#
+#
+### 
+### USERS DO NOT CHANGE THE FOLLOWING SECTION
+### AUTOMATED CHANGES MAY BE MADE BY ADMINISTRATOR
+###
+
+########################################################################
+# general defaults for all hosts
+#
+.*:
+
+  # the following options hide potentially useful security
+  # information messages, but are necessary for transparency
+  # when ssh is used for automation tasks.  for connecting
+  # to intel hosts this is an acceptable risk.
+
+  # suppress warnings about missing or stale hostkeys
+  StrictHostKeyChecking no
+
+  # suppress info messages like "Authentication Successful"
+  QuietMode yes
+
+  # stock default is no, this is relaxed for intel but made
+  # strict again conditionally in following rules...
+  TrustX11Applications yes
+
+########################################################################
+# matches any hostname/address containing a dot (.) character,
+# intent is more strict settings for fqhn that may be external
+# to intel.  these connections are unlikely to be automated
+#
+.*\..*:
+  StrictHostKeyChecking ask
+  QuietMode no
+  TrustX11Applications no
+  PasswordPrompt "(rule2) ssh %r@%h's password: "
+  
+########################################################################
+# intel.com would have matched above rule, need to relax again
+# same for internal subnet numbers.  hopefully this list will
+# not grow and all new internal nets will be 10.*.  if you find
+# exceptions copy this stanza to the end of the file and modify
+# for networks you access.
+#
+.*\.intel\.com|10\..*|132\.233\..*|134\.134\..*|137\.102\..*|143\.182\..*|143\.183\..*|143\.185\..*|146\.152\..*|172\.16\..*|172\.21\..*|172\.22\..*|172\.24\..*|172\.25\..*|172\.26\..*|172\.28\..*|172\.30\..*|198\.175\..*|66\.150\..*|127\..*:
+  StrictHostKeyChecking no
+  QuietMode yes
+  TrustX11Applications yes
+  PasswordPrompt "(rule3) ssh %r@%h's password: "
+
+# force user to specify a hostname pattern when adding options to the end of
+# this file, else those would simply apply to the above intel network list.
+other:
+
+##
+## NOTE to users who made custom changes to previous versions:
+##
+## The format of regular expressions used here were changed
+## as of ssh version 7.1.2 being released Q3/2010.
+##
+## Oldest ssh versions used shell style e.g. '*'
+## Recent versions could be configured for both shell style '*'
+## and standard regexp '.*' using the VERSION/REGEX-STYLE tags
+## at the top of this template.  New versions 7.x now accept
+## only standard POSIX style regexp '.*'
+##
+## We hope this type of change never will happen again, and all
+## future upgrades can be fully automated within this section
+## controlled by IT/Engineering Computing, while your custom
+## changes below can be reused with no action required.
+## 
+
+### 
+### USERS DO NOT CHANGE THE PREVIOUS SECTION
+### AUTOMATED CHANGES MAY BE MADE BY ADMINISTRATOR
+###
+
+# User changes should be located below.  Precedence of
+# hostnames/patterns in this file should be ordered from
+# general to specific.  The last stanza matching the host
+# (or IP address) will be applied.  You may uncomment or
+# copy/modify these examples as needed.
+
+###############################################################
+
+# the default escape character '~' may interfere with
+# running scripts on the command line like ~/bin/myscript,
+# suggested alternative ',' helps avoid this if you choose
+
+#.*:
+#	EscapeChar ,
+
+###############################################################
+
+#permit quiet interaction with special host
+#.*.benignvendor.com:
+#	StrictHostKeyChecking no
+#	QuietMode yes
+
+###############################################################
+
+#remain paranoid for this untrusted host
+#rogue1.xyz.intel.com:
+#	StrictHostKeyChecking yes
+#	QuietMode no
+#	TrustX11Applications no
+
+##########################################################
+#                  CAUTION!
+# The following can be bad - do not be tempted to use
+# short *.sitedomain for intel hosts.  You may get
+# unexpected failures where real DNS domains exist
+# on the outside Internet.  If they do not exist
+# today, they may be registered in the future and
+# you will not easily recognize why this breaks.
+# Example: .ch is the country of Switzerland.
+#
+# In most cases the system-controlled list of network
+# numbers should  cover these destinations adequately.
+# The newest ssh version actually applies the network
+# selections with higher precedence than the hostname
+# if both exist in this file.
+#
+#.*\.sc|.*\.png|.*\.pdx|.*\.fm|.*\.ch|.*\.iil|.*\.ibw|.*\.iind:
+#	StrictHostKeyChecking	no
+#	QuietMode		yes
+#	TrustX11Applications	yes
+#
+##########################################################
+#                  ALTERNATIVE
+# If you want to use short style names, use individual
+# entries for specific hosts.  Example:
+#
+#rsync.ch:
+#	Host			rsync.ch.intel.com
+#	StrictHostKeyChecking	no
+#	QuietMode		yes
+#	TrustX11Applications	yes
+#
+##########################################################
+
+# Sample config for external host reached via socks proxy.
+#
+#myhost:
+#	ProxyCommand	/usr/intel/bin/socat - socks4a:proxy-socks.fm.intel.com:%h:%p
+#	Host            myhost.dyndns.org
+#	User            myname
+#	QuietMode	no
+#	StrictHostKeyChecking ask
+
+# Troubleshooting help:
+# Using above settings ssh runs with 'QuietMode yes' for most connections.
+# Sometimes this will be too quiet about reporting warnings or
+# errors.  If you experience a problem, uncomment the next three
+# lines for more detail until the problem is resolved:
+# 
+#.*:
+#       StrictHostKeyChecking ask
+#       QuietMode no
+#       TrustX11Applications no
+
+santa:
+	Host sccj002253.sc.intel.com
+
+fort:
+	Host fcab1221.fc.intel.com
+
+pdx:
+	Host plxd3483.pdx.intel.com
+
+zone:
+	Host sccj002883.sc.intel.com
