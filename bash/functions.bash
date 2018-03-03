@@ -146,6 +146,11 @@ if [[ $EC_SITE == 'sc' ]]; then
             srcenv
         fi
 
+        if [[ ! -f "$MODEL_ROOT/tools/ipgen/$1" ]]; then
+            echo "Error: DUT $1 does not exists"
+            return
+        fi
+
         export XWEAVE=$MODEL_ROOT/tools/ipgen/${1}/output/xweave/design_report.json
         if [[ -f $XWEAVE ]]; then
             export STF_SPFSPEC=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.stf.spfspec

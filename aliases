@@ -5,49 +5,34 @@
 # $Revision: 1.1 $
 
 alias grep 'grep --color=auto'
-alias em 'emacs'
+alias em emacs
 alias en 'emacs -nw'
 alias e 'emacsclient -n'
 alias ef 'emacsclient -c'
 alias et 'emacsclient -t'
-alias ed 'emacs --daemon'
-alias less '$HOME/scripts/less-xterm.sh'
-alias git '$HOME/scripts/git-xterm.sh'
-alias tmux 'tmux -2'
-alias ag '$HOME/scripts/ag-xterm.sh'
+
+alias wl 'less -S -# 15' # for use with wide files like trk
+alias rp realpath
 
 alias timer '/usr/bin/time --format="TIMER: %C finished in %e seconds"'
 
 alias cdm 'cd $MODEL_ROOT'
-alias sf '$HOME/scripts/smart_find.sh'
 alias src-alias 'source $HOME/.aliases'
 
-alias wide-xl  'xrandr -s 1920x1200'
-alias wide-l   'xrandr -s 1920x1080'
+alias win-xl 'xrandr -s 1920x1200'
+alias win-l 'xrandr -s 1920x1080'
+alias win-m 'xrandr -s 1536x864'
 
-alias exith 'history -h >> $HOME/doc/history.log && exit'
-alias save-history 'history -h >> $HOME/doc/history.log'
 if ($EC_SITE == fc) then
    alias srcenv 'source /p/hdk/rtl/hdk.rc -cfg shdk73; setenv NBQSLOT /SDG/sdg74/fe/build/chassis; setenv NBCLASS SLES11SP4\&\&20G'
 else
     alias srcenv 'source /p/hdk/rtl/hdk.rc -cfg shdk74; setenv NBQSLOT /SDG/sdg74/fe/build/chassis; setenv NBCLASS SLES11SP4\&\&20G'
 endif
-alias setroot 'setenv MODEL_ROOT `$HOME/scripts/set_root.sh`'
-alias tool-config 'ToolConfig.pl get_tool_env spyglass | cut -f 2,3,4 -d " " | source /dev/stdin'
-
-alias ipgen '($HOME/scripts/ipgen_start.sh $MODEL_ROOT) && source setup && ($HOME/scripts/ipgen_finish.sh $MODEL_ROOT $DFT_REPO_ROOT) || ipgen-reset'
-alias ipgen-reset '$HOME/scripts/ipgen_reset.sh $MODEL_ROOT'
-alias xterm-custom 'xterm -fa "Source*Code*Pro*" -fs 11 -u8'
-
-alias notify-home 'set exit_code=PASSED || set exit_code=FAILED ; $HOME/scripts/notify-home.sh $exit_code'
-alias notify-work 'set exit_code=PASSED || set exit_code=FAILED ; $HOME/scripts/notify-work.sh $exit_code'
-alias notify-all  'set exit_code=PASSED || set exit_code=FAILED ; $HOME/scripts/notify-all.sh $exit_code'
-
-# alias precmd 'echo "\a" ; $HOME/scripts/print_precmd.sh && setroot'
 
 alias bld '$GK_CONFIG_DIR/hooks/setup_git_config.pl -c \!:1; nbjob run --target $EC_SITE"_critical" --qslot $NBQSLOT --mail E bman -dut \!:1 -mc \!:2'
 alias check 'nbqstat -P $EC_SITE"_critical" --task-name --priority user=$USER'
 alias spf 'setenv SPF_ROOT /p/hdk/cad/spf/latest; source $SPF_ROOT/bin/spf_setup_env'
 alias run 'simregress -dut \!:1 -model \!:2 -l \!:3 -trex -save -trex- -net'
-alias start-bash '/usr/intel/pkgs/bash/4.3/bin/bash'
-alias ta 'tmux attach -t wave_1'
+alias phases 'gzgrep "started\." acerun.log* | grep sla_tb_env | cut -d"@" -f2'
+
+# alias precmd 'echo "\a" ; $HOME/scripts/print_precmd.sh && setroot'

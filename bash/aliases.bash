@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
-alias o='less'
 alias wl='less -S -# 15'
-alias rp='realpath'
+alias rp=realpath
 alias cdm='cd $MODEL_ROOT'
 
 alias timer='/usr/bin/time --format="TIMER: %C finished in %e seconds"'
@@ -20,11 +19,8 @@ fi
 
 alias phases='gzgrep "started\." acerun.log* | grep sla_tb_env | cut -d"@" -f2'
 alias ports='netstat -lptu'
-alias xterm-custom='xterm -fs 11 -u8'
+alias reload-fonts='fc-cache -fv'
 
-alias notify-home='exit_code=PASSED || exit_code=FAILED ; $HOME/scripts/notify-home.sh $exit_code'
-alias notify-work='exit_code=PASSED || exit_code=FAILED ; $HOME/scripts/notify-work.sh $exit_code'
-alias notify-all='exit_code=PASSED || exit_code=FAILED ; $HOME/scripts/notify-all.sh $exit_code'
 alias check='nbqstat -P $NBPOOL --task-name --priority user=$USER'
 
 alias dsync='$HOME/.dotfiles/dotsync/bin/dotsync'
