@@ -302,6 +302,34 @@ if [[ $EC_SITE == 'sc' || $EC_SITE == 'pdx' ]]; then
         verdiwaves -dut "$1" -m "$2" "${fsdb[@]}" "${@:4}"
     }
 
+    rem-waves () {
+        if (( $# < 2 )); then
+            echo "Error: must specify dut and model to pull up waves"
+            return
+        fi
+
+        if [[ ./ -ef ~ ]]; then
+            echo "Error: can't run remote verdi session from homedisk"
+            return
+        fi
+
+        if [[ ! $RTL_PROJ_BIN ]]; then
+            srcenv
+        fi
+
+        if [[ ! -f "$MODEL_ROOT/target/$1/vcs_4value/$2/$2.simv" ]]; then
+            echo "Error: $MODEL_ROOT/target/$1/vcs_4value/$2/$2.simv does not exist!"
+            return
+        fi
+
+        if (($# == 3)) && [[ ! -f $3 ]]; then
+            echo "Error: fsdb file: $2 does not exist."
+            return
+        fi
+
+        nbjob run --target "${EC_SITE}"_normal3 --qslot /SDG/sdg74/fe/rgr/snr/regress --class 'SLES11SP4&&40G' --mode interactive ~/scripts/run_verdi.csh "$1" "$2" "$3"
+    }
+
     reg () {
 
         if (( $# < 3 )); then

@@ -32,3 +32,4 @@ alias code-review='/usr/intel/pkgs/ccollab/7.3.7302/ccollabgui &'
 alias mpar='ag --nonumbers focus_stf | sort | uniq'
 
 alias real-failures="ag --search-zip --depth 1 -G postsim.log -l '(?:requiredtext not found:|jtagbfm|stf_bfm_agent)'"
+alias stf-packets="ag --search-zip --nonumbers '(?:^ovm_error.+?stf_bfm_driver|^actual: |^expect: |^  mask: |^ovm_info.+?\[spf_itpp_parser_info\] \(\d+\)|^ovm_info.+?stf_bfm_driver.+?expected packet passed)' acerun.log.gz"
