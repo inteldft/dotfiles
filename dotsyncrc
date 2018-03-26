@@ -57,7 +57,6 @@ bin/tp:bin/tp
 bin/clipboard:bin/clipboard
 pygments/pygmentize:bin/pygmentize
 
-ssh/config:.ssh/config
 ssh/ssh2_config:.ssh2/ssh2_config
 
 # directories
