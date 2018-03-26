@@ -1,4 +1,6 @@
+# brutal level
 severity = 1
+# only first 100 violations
 top = 100
 program-extensions = .espf
 
