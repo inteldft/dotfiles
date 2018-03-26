@@ -115,8 +115,8 @@ sub get_disk_stats {
 sub get_disk_usage {
     my ($disk) = @_;
 
-    const my $STODSTATUS_CMD => q{/usr/intel/bin/stodstatus storage-users --fields User,Usage --sort-by Usage "Path='%s'"};
-    my $cmd = sprintf $STODSTATUS_CMD, $disk;
+    const my $STODSTATUS_CMD => q{/usr/intel/bin/stodstatus storage-users --target start.%s.intel.com --fields User,Usage --sort-by Usage "Path='%s'"};
+    my $cmd = sprintf $STODSTATUS_CMD, $ENV{EC_SITE}, $disk;
     print "Command: $cmd\n" if $options{debug};
     my @output = `$cmd`;
     if (${^CHILD_ERROR_NATIVE}) {
