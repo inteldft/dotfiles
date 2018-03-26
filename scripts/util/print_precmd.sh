@@ -16,4 +16,4 @@ W="\033[0;37m"    # white
 # unset the colors
 NONE="\033[0m"    # unsets color to term's fg color
 
-printf "${G}[${B}$TOP_PATH${G}]${NONE}\n"
+printf "\n${G}[${B}$TOP_PATH${G}]${NONE}\n"
