@@ -84,26 +84,6 @@ mdcd () {
     cd "$1" || return
 }
 
-sync-site () {
-    if [[ ! $1 ]]; then
-        echo "need to specify a directory"
-        return
-    fi
-
-    if [[ $EC_SITE == 'sc' || $EC_SITE == 'pdx' ]]; then
-        local remote_host='fcab1249.fc'
-    elif [[ $EC_SITE == 'fc' ]]; then
-        local remote_host='scci19347.sc'
-    else
-        echo "remote host unresolved"
-        return
-    fi
-
-    export REMOTE_HOST=$remote_host
-    local cmd="rsync -az $1 ${remote_host}.intel.com:$1"
-    eval "$cmd"
-}
-
 # tell me which version of an intel IP I am using
 whichip () {
     ToolConfig.pl get_tool_path "$1"
