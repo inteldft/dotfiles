@@ -90,8 +90,12 @@ whichip () {
 }
 
 srcspf () {
-    if [[ $1 == 'latest' ]] || [[ ! -d $MODEL_ROOT ]]; then
+    if [[ $1 == 'latest' ]]; then
         SPF_ROOT=/p/hdk/cad/spf/latest
+    elif [[ -d $1 ]]; then
+        SPF_ROOT=$1
+    elif [[ -d "/p/hdk/cad/spf/$1" ]]; then
+        SPF_ROOT="/p/hdk/cad/spf/$1"
     else
         SPF_ROOT=$(whichip espf)
     fi
