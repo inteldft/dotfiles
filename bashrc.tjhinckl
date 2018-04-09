@@ -158,8 +158,9 @@ if [[ -z ${INSIDE_EMACS+x} ]]; then
     [[ $- =~ .*i.* ]] && bind '"\C-r": "\C-a hh -- \C-j"'
 fi
 
+# Defined by my theme in bash-it
 munge -cmd -end PROMPT_COMMAND prompt_command
-munge -cmd PROMPT_COMMAND __my_exit_code
+munge -cmd PROMPT_COMMAND get_exit_code
 
 if [[ $INSIDE_EMACS ]]; then
     alias > /tmp/$$.alias
