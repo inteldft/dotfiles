@@ -102,27 +102,6 @@ munge PATH ~/bin
 munge PATH ~/local/bin
 munge MANPATH ~/.local/share/man
 
-restore_hist () {
-    if [[ $TMUX_PANE ]]; then
-        local tmux_abs=/usr/intel/bin/tmux
-        HISTFILE=~/.tmux/bash_history/bash_history.$($tmux_abs display-message -p '#S').$TMUX_PANE
-
-        if [[ -f ~/temp/tmux_restore_running ]]; then
-            local pane_index window_number session_name restore_file
-	        pane_index=$(   $tmux_abs display -pt "${TMUX_PANE}" '#{pane_index}'  )
-	        window_number=$($tmux_abs display -pt "${TMUX_PANE}" '#{window_index}')
-	        session_name=$( $tmux_abs display -pt "${TMUX_PANE}" '#{session_name}')
-            restore_file=~/.tmux/resurrect/bash_history-"$session_name:$window_number.$pane_index"
-            if [[ -f $restore_file ]]; then
-	            cp "$restore_file" "$HISTFILE"
-            fi
-        fi
-        touch "$HISTFILE"
-    fi
-}
-
-restore_hist
-
 BASE16_SHELL=~/.config/base16-shell/
 
 [[ -z ${INSIDE_EMACS+x} ]] &&
