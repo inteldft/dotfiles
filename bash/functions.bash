@@ -33,6 +33,14 @@ munge () { # prevent duplicates in aggregate variables
     fi
 }
 
+getmodel () {
+    model=$(ag --nonumbers '^ORIG_MODEL_ROOT[=]' acerun.log.gz | head -n1)
+    if [[ -z "$model" ]]; then
+        model=$(ag --nonumbers '^MODEL_ROOT_ORIGINAL[=]' acerun.log.gz | head -n1)
+    fi
+    awk -F= '{print $2}' <<< "$model"
+}
+
 # print out the size of all files/directories in the specified directory and sort them by size
 dir-size () {
     du -a -h --max-depth=1 "${1:-.}" | sort -h
@@ -45,6 +53,10 @@ man() {
 # source a C-shell script
 csrc() {
     eval "$(csh-source --inline "$@")"
+}
+
+tsrc () {
+    tcsh -c "source $*"
 }
 
 count() {
@@ -94,10 +106,14 @@ srcspf () {
         SPF_ROOT=/p/hdk/cad/spf/latest
     elif [[ -d $1 ]]; then
         SPF_ROOT=$1
-    elif [[ -d "/p/hdk/cad/spf/$1" ]]; then
+    elif [[ $1 ]] && [[ -d "/p/hdk/cad/spf/$1" ]]; then
         SPF_ROOT="/p/hdk/cad/spf/$1"
     else
         SPF_ROOT=$(whichip espf)
+    fi
+
+    if [[ $LD_LIBRARY_PATH ]];  then
+        unset LD_LIBRARY_PATH
     fi
 
     export SPF_ROOT
@@ -130,7 +146,7 @@ if [[ $EC_SITE == 'sc' ]]; then
             srcenv
         fi
 
-        if [[ ! -f "$MODEL_ROOT/tools/ipgen/$1" ]]; then
+        if [[ ! -d "$MODEL_ROOT/tools/ipgen/$1" ]]; then
             echo "Error: DUT $1 does not exists"
             return
         fi
@@ -138,22 +154,23 @@ if [[ $EC_SITE == 'sc' ]]; then
         export XWEAVE=$MODEL_ROOT/tools/ipgen/${1}/output/xweave/design_report.json
         if [[ -f $XWEAVE ]]; then
             export STF_SPFSPEC=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.stf.spfspec
+            export STF_MARSHAL=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.stf.spfspec.marshall
             export TAP_SPFSPEC=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.tap.spfspec
+            export TAP_MARSHAL=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.tap.spfspec.marshall
             export TAP2STF_MAP_FILE=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.tap2stf.map
-            XWEAVE_REPO_ROOT=$(whichip ipconfig/xweave)
             export XWEAVE_REPO_ROOT
         else # wave 3 collateral locations
             export STF_SPFSPEC=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/spf/${1}.stf.spfspec
+            export STF_MARSHAL=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/spf/${1}.stf.spfspec.marshall
             export TAP_SPFSPEC=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/spf/${1}.tap.spfspec
+            export TAP_MARSHAL=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/spf/${1}.tap.spfspec.marshall
             export TAP2STF_MAP_FILE=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/spf/${1}.tap2stf.map
             export XWEAVE=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/xweave/design_report.json
         fi
+        XWEAVE_REPO_ROOT=$(whichip ipconfig/xweave)
         export REGLIST_DIR=$MODEL_ROOT/verif/reglist/${1}/dft
         export ESPF_DIR=${ESPF_DIR-${HOME}/workspace/chassis_dft_val_global/spf_sequences.1p0/scan}
         export DFT_GLOBAL_DIR=${DFT_GLOBAL_DIR-${HOME}/workspace/chassis_dft_val_global}
-        if [[ $LD_LIBRARY_PATH ]];  then
-            unset LD_LIBRARY_PATH
-        fi
         srcspf
 
     }
@@ -169,16 +186,15 @@ if [[ $EC_SITE == 'sc' ]]; then
         fi
 
         export STF_SPFSPEC=$MODEL_ROOT/subIP/snr/dft_ipgen_snr/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.stf.spfspec
+        export STF_MARSHAL=$MODEL_ROOT/subIP/snr/dft_ipgen_snr/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.stf.spfspec.marshall
         export TAP_SPFSPEC=$MODEL_ROOT/subIP/snr/dft_ipgen_snr/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.tap.spfspec
+        export TAP_MARSHAL=$MODEL_ROOT/subIP/snr/dft_ipgen_snr/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.tap.spfspec.marshall
         export TAP2STF_MAP_FILE=$MODEL_ROOT/subIP/snr/dft_ipgen_snr/tools/ipgen/${1}/output/dft/verif/rtl/spf/${1}.tap2stf.map
         export XWEAVE=$MODEL_ROOT/subIP/snr/dft_ipgen_snr/tools/ipgen/${1}/output/xweave/design_report.json
         export ESPF_DIR=${ESPF_DIR-${HOME}/workspace/chassis_dft_val_global/spf_sequences.1p0/scan}
         export DFT_GLOBAL_DIR=${DFT_GLOBAL_DIR-${HOME}/workspace/chassis_dft_val_global}
         XWEAVE_REPO_ROOT=$(whichip ipconfig/xweave)
         export XWEAVE_REPO_ROOT
-        if [[ $LD_LIBRARY_PATH ]];  then
-            unset LD_LIBRARY_PATH
-        fi
         srcspf
 
     }
@@ -207,8 +223,6 @@ else
         export ESPF_DIR=$MODEL_ROOT/verif/tests/dft/source_scan_10nm
         export ITPP_DIR=$MODEL_ROOT/verif/tests/dft/itpp
         export DFT_GLOBAL_DIR=${DFT_GLOBAL_DIR-${HOME}/workspace/chassis_dft_val_global}
-
-        unset LD_LIBRARY_PATH
         srcspf latest
     }
 fi
@@ -287,13 +301,52 @@ if [[ $EC_SITE == 'sc' || $EC_SITE == 'pdx' ]]; then
     }
 
     rem-waves () {
-        if (( $# < 2 )); then
-            echo "Error: must specify dut and model to pull up waves"
-            return
-        fi
 
         if [[ ./ -ef ~ ]]; then
             echo "Error: can't run remote verdi session from homedisk"
+            return
+        fi
+
+        local model
+        local dut
+        local waves
+
+        if (( $# == 3 )); then
+            model=$1
+            dut=$2
+            waves=$3
+        fi
+
+        if (( $# == 2 )); then
+            model=$1
+            dut=$2
+        fi
+
+        if (( $# == 1 )); then
+            waves=$1
+        fi
+
+        if [[ -z $model ]]; then
+            local dirs
+            IFS='/' read -r -a dirs <<< "$PWD"
+            model="${dirs[-4]}"
+            dut="${dirs[-3]}"
+        fi
+
+        if [[ -z $waves ]]; then
+            waves=novas.fsdb.gz
+            if [[ ! -f "$waves" ]]; then
+                waves=novas_000.fsdb.gz
+            fi
+        fi
+
+        if [[ ! -f "$MODEL_ROOT/target/$model/vcs_4value/$dut/$dut.simv" ]]; then
+            echo "Error: $MODEL_ROOT/target/$model/vcs_4value/$dut/$dut.simv does not exist!"
+            return
+        fi
+
+        if [[ "$waves" ]] && [[ ! -f $waves ]]; then
+            echo "Error: fsdb file: $waves does not exist."
             return
         fi
 
@@ -301,17 +354,9 @@ if [[ $EC_SITE == 'sc' || $EC_SITE == 'pdx' ]]; then
             srcenv
         fi
 
-        if [[ ! -f "$MODEL_ROOT/target/$1/vcs_4value/$2/$2.simv" ]]; then
-            echo "Error: $MODEL_ROOT/target/$1/vcs_4value/$2/$2.simv does not exist!"
-            return
-        fi
-
-        if (($# == 3)) && [[ ! -f $3 ]]; then
-            echo "Error: fsdb file: $2 does not exist."
-            return
-        fi
-
-        nbjob run --target "${EC_SITE}"_normal3 --qslot /SDG/sdg74/fe/rgr/snr/regress --class 'SLES11SP4&&40G' --mode interactive ~/scripts/run_verdi.csh "$1" "$2" "$3"
+        local cmd="nbjob run --target ${EC_SITE}_normal3 --qslot /SDG/sdg74/fe/rgr/snr/regress --class 'SLES11SP4&&40G' --mode interactive ~/scripts/run_verdi.csh $model $dut $waves"
+        echo "$cmd"
+        eval "$cmd"
     }
 
     reg () {

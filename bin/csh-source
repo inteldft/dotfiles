@@ -16,6 +16,7 @@ use List::MoreUtils qw(any uniq);
 use IPC::Open3;
 use feature qw(say);
 use Term::ANSIColor qw(:constants);
+use autodie qw(close);
 
 #*****************************************************************************
 # File Scope Variables
@@ -30,6 +31,8 @@ my %changed_vars = ();
 my %old_alias    = ();
 
 my $first_run = 1; # only print output for first run
+
+my @ignore_alias = qw(modpath module error);
 
 #*****************************************************************************
 # Main
@@ -91,7 +94,8 @@ sub extract_script_changes {
             my $fh = ($opt{inline}) ? *STDERR : *STDOUT;
             while (<$cmd_out>) {
                 unless (/$opt{ignore_msg}/) {
-                    print {$fh} $_;
+                    my $line = $_ =~ s/\\n/\n/gr;
+                    print {$fh} $line;
                 }
             }
         }
@@ -128,11 +132,11 @@ sub extract_env {
 sub extract_aliases {
     my $alias_line = shift;
     my ($alias, $val) = split(/\s+/, $alias_line, 2);
-    return if ($alias eq 'modpath');
+    return if (any { $alias eq $_ } @ignore_alias);
     if ($alias and defined $val) {
         my $setenv    = sub {($opt{shell_type} eq 'fish') ? "set -x $1" : "export $1="};
         my $unset     = ($opt{shell_type} eq 'fish') ? 'set -e'    : 'unset';
-        my $eval_char = ($opt{shell_type} eq 'fish') ? ''          : '$';
+        my $eval_char = ($opt{shell_type} eq 'fish') ? ''          : q{$};
         $old_alias{$alias} = $val;
         $val =~ s/setenv\s+(\w+)/&$setenv/eg;
         $val =~ s/unsetenv/$unset/g;
@@ -345,7 +349,7 @@ sub get_options {
         'shell_args' => q{},
     );
 
-    # run GetOptionsions to process arguments
+    # run GetOptions to process arguments
     GetOptions(
         '<>'              => \&get_source,
         'alias!'          => \$options{alias},
@@ -368,7 +372,6 @@ sub get_options {
     }
 
     $options{shell_args} = join q{ }, @ARGV;
-    # $options{shell_args} =~ s/^\s*\-\-(\s+|$)//; # get rid of '--' which is passed through to @ARGV by pass_through
     $options{source_args} = join(q{ }, @source_args);
 
     if ($options{debug} and $options{verbose}) {

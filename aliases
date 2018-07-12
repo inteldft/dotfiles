@@ -24,15 +24,14 @@ alias win-l 'xrandr -s 1920x1080'
 alias win-m 'xrandr -s 1536x864'
 
 if ($EC_SITE == fc) then
-   alias srcenv 'source /p/hdk/rtl/hdk.rc -cfg shdk73; setenv NBQSLOT /SDG/sdg74/fe/build/chassis; setenv NBCLASS SLES11SP4\&\&20G'
+   alias srcenv 'source /p/hdk/rtl/hdk.rc -cfg shdk73'
 else
-    alias srcenv 'source /p/hdk/rtl/hdk.rc -cfg shdk74; setenv NBQSLOT /SDG/sdg74/fe/build/chassis; setenv NBCLASS SLES11SP4\&\&20G'
+    alias srcenv 'source /p/hdk/rtl/hdk.rc -cfg shdk74'
 endif
 
-alias bld '$GK_CONFIG_DIR/hooks/setup_git_config.pl -c \!:1; nbjob run --target $EC_SITE"_critical" --qslot $NBQSLOT --mail E bman -dut \!:1 -mc \!:2'
+alias bld '$GK_CONFIG_DIR/hooks/setup_git_config.pl -c \!:1; nbjob run --target $EC_SITE"_critical" --mail E bman -dut \!:1 -mc \!:2'
 alias check 'nbqstat -P $EC_SITE"_critical" --task-name --priority user=$USER'
 alias spf 'setenv SPF_ROOT /p/hdk/cad/spf/latest; source $SPF_ROOT/bin/spf_setup_env'
 alias run 'simregress -dut \!:1 -model \!:2 -l \!:3 -trex -save -trex- -net'
 alias phases 'gzgrep "started\." acerun.log* | grep sla_tb_env | cut -d"@" -f2'
-
-# alias precmd 'echo "\a" ; $HOME/scripts/print_precmd.sh && setroot'
+# alias precmd 'echo "\a" ; $HOME/scripts/print_precmd.sh'

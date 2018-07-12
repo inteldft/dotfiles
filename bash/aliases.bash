@@ -31,5 +31,11 @@ alias mem-usage='ps aux --sort -rss'
 alias code-review='/usr/intel/pkgs/ccollab/7.3.7302/ccollabgui &'
 alias mpar='ag --nonumbers focus_stf | sort | uniq'
 
+alias run_dft_ipgen='$DFT_REPO_ROOT/DFTNetworkGen/run_dft_ipgen'
+
 alias real-failures="echo 'BFM failure:'; ag --search-zip --depth 1 -G postsim.log -l '(?:jtagbfm|stf_bfm_agent)'; echo 'early termination:'; ag --search-zip --depth 1 -G postsim.log -l '(?:requiredtext not found:)'"
 alias stf-packets="ag --search-zip --nonumbers '(?:^ovm_error.+?stf_bfm_driver|^actual: |^expect: |^  mask: |^ovm_info.+?\[spf_itpp_parser_info\] \(\d+\)|^ovm_info.+?stf_bfm_driver.+?expected packet passed)' acerun.log.gz"
+alias spftmp='for i in *.espf; do $SPF_ROOT/bin/spf_perl_pp -stfSpecFile $STF_SPFSPEC -tapSpecFile $TAP_SPFSPEC -testSeqFile $i --itppFile $i.itpp --templateFile $DFT_GLOBAL_DIR/spf_sequences.1p0/tap/sub_system/TAP ; done'
+
+alias use-spacemacs='ln -nsfv /nfs/site/home/tjhinckl/.dotfiles/emacs.d ~/.emacs.d'
+alias use-custom='ln -nsfv /nfs/site/home/tjhinckl/custom/emacs.d ~/.emacs.d'
