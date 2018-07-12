@@ -1,6 +1,3 @@
-cite 'about-alias'
-about-alias 'the silver searcher (ag) aliases'
-
 # ag --smart-case --pager="less -MIRFX"
 
 if [[ $INSIDE_EMACS ]]; then

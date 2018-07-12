@@ -45,20 +45,8 @@ shopt -s no_empty_cmd_completion # don't attempt completion on empty commands
 
 stty erase '^?'
 
-# Path to the bash it configuration
-export BASH_IT=~/.bash-it
-export BASH_IT_CUSTOM=~/.bash
-
-# Lock and Load a custom theme file
-# location /.bash_it/themes/
-export BASH_IT_THEME='troy'
-
-# turn off version control status checking within the prompt for all themes
-export SCM_CHECK=false
-
-# Load Bash It
-# shellcheck source=/nfs/site/home/tjhinckl/.bash-it/bash_it.sh
-[[ -s $BASH_IT/bash_it.sh ]] && source $BASH_IT/bash_it.sh
+# custom functions and scripts. Some of these are stolen from bash-it
+for f in ~/.bash/*.bash; do source $f; done
 
 munge PATH ~/bin
 munge PATH ~/local/bin

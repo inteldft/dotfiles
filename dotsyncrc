@@ -62,7 +62,6 @@ ssh/ssh2_config:.ssh2/ssh2_config
 
 # directories
 bash
-bash-it
 emacs.d
 tmux
 fonts
