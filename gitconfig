@@ -1,65 +1,65 @@
 [alias]
-	add-unmerged = "!f() { git ls-files --unmerged | cut -f2 | sort -u ; }; git add `f`"
-	aliases = !git config --get-regexp 'alias.*' | colrm 1 6 | sed 's/[ ]/ = /'
-	author = "!f() { git log --author="$1" ; }; f"
-	self-blame = "!f() { git log --author=\"$(git config user.name)\" -p --follow $1 ; }; f"
-	ci = commit
-	co = checkout
-	pull = pull --rebase
-	unmerged = diff --name-only --diff-filter=U
-	lc = log origin..HEAD --name-status --no-merges
-	lchanges = "!csh -c 'git fetch $1 ; if($#argv>0) shift; git log FETCH_HEAD..HEAD $*'"
-	parent = remote show origin
-	rc = log HEAD..origin --name-status --no-merges
-	rchanges = "!csh -c 'git fetch $1 ; if($#argv>0) shift; git log HEAD..FETCH_HEAD $*'"
-	root = rev-parse --show-toplevel
-	st = status -uno
-	df = diff -w
-	bl = blame -wM
-    bare = config --bool core.bare true
-    unbare = config --bool core.bare false
-	ssave  = "!f() { git stash save  $*    stash^{/$(git rev-parse --abbrev-ref HEAD)}; }; f"
-	sshow  = "!f() { git stash show  $* -p stash^{/$(git rev-parse --abbrev-ref HEAD)}; }; f"
-	sapply = "!f() { git stash apply $*    stash^{/$(git rev-parse --abbrev-ref HEAD)}; }; f"
-	sdrop  = "!f() { git stash drop stash@{$1}; }; f"
-	cluster = config --get intel.cluster
-	edit-unmerged = "!f() { git ls-files --unmerged | cut -f2 | sort -u ; }; /usr/intel/bin/emacs `f`"
-	gk = "!sh -c 'gk.pl $1 $2 ' - "
-	ldiffchanges = "!csh -c 'git fetch $1 ; if($#argv>0) shift; git diff FETCH_HEAD..HEAD $*'"
-	lfchanges = "!csh -c 'git fetch $1 ; if($#argv>0) shift; git log --pretty=\"format:\" --name-only FETCH_HEAD..HEAD $* | sort | uniq'"
-	rdiffchanges = "!csh -c 'git fetch $1 ; if($#argv>0) shift; git diff HEAD..FETCH_HEAD $*'"
-	rfchanges = "!csh -c 'git fetch $1 ; if($#argv>0) shift; git log --pretty=\"format:\" --name-only HEAD..FETCH_HEAD $* | sort | uniq'"
-	stepping = config --get intel.stepping
-	updatenow = !sh -c 'updatenow.pl $1'
+        add-unmerged = "!f() { git ls-files --unmerged | cut -f2 | sort -u ; }; git add `f`"
+        aliases = !git config --get-regexp 'alias.*' | colrm 1 6 | sed 's/[ ]/ = /'
+        author = "!f() { git log --author="$1" ; }; f"
+        self-blame = "!f() { git log --author=\"$(git config user.name)\" -p --follow $1 ; }; f"
+        ci = commit
+        co = checkout
+        pull = pull --rebase
+        unmerged = diff --name-only --diff-filter=U
+        lc = log origin..HEAD --name-status --no-merges
+        lchanges = "!csh -c 'git fetch $1 ; if($#argv>0) shift; git log FETCH_HEAD..HEAD $*'"
+        parent = remote show origin
+        rc = log HEAD..origin --name-status --no-merges
+        rchanges = "!csh -c 'git fetch $1 ; if($#argv>0) shift; git log HEAD..FETCH_HEAD $*'"
+        root = rev-parse --show-toplevel
+        st = status -uno
+        df = diff -w
+        bl = blame -wM
+        bare = config --bool core.bare true
+        unbare = config --bool core.bare false
+        ssave  = "!f() { git stash save  $*    stash^{/$(git rev-parse --abbrev-ref HEAD)}; }; f"
+        sshow  = "!f() { git stash show  $* -p stash^{/$(git rev-parse --abbrev-ref HEAD)}; }; f"
+        sapply = "!f() { git stash apply $*    stash^{/$(git rev-parse --abbrev-ref HEAD)}; }; f"
+        sdrop  = "!f() { git stash drop stash@{$1}; }; f"
+        cluster = config --get intel.cluster
+        edit-unmerged = "!f() { git ls-files --unmerged | cut -f2 | sort -u ; }; /usr/intel/bin/emacs `f`"
+        gk = "!sh -c 'gk.pl $1 $2 ' - "
+        ldiffchanges = "!csh -c 'git fetch $1 ; if($#argv>0) shift; git diff FETCH_HEAD..HEAD $*'"
+        lfchanges = "!csh -c 'git fetch $1 ; if($#argv>0) shift; git log --pretty=\"format:\" --name-only FETCH_HEAD..HEAD $* | sort | uniq'"
+        rdiffchanges = "!csh -c 'git fetch $1 ; if($#argv>0) shift; git diff HEAD..FETCH_HEAD $*'"
+        rfchanges = "!csh -c 'git fetch $1 ; if($#argv>0) shift; git log --pretty=\"format:\" --name-only HEAD..FETCH_HEAD $* | sort | uniq'"
+        stepping = config --get intel.stepping
+        updatenow = !sh -c 'updatenow.pl $1'
 [color]
-	ui = auto
+        ui = auto
 [core]
-	preloadindex = true
-	sharedrepository = 0640
+        preloadindex = true
+        sharedrepository = 0640
 [diff]
-	mnemonicprefix = true
-	renames = true
+        mnemonicprefix = true
+        renames = true
 [http]
-	proxy = https://proxy-chain.intel.com:912
+        proxy = https://proxy-chain.intel.com:912
 [intel]
-	clone-minimum-free-kb = 10485760
-	userInitVersion = 2
+        clone-minimum-free-kb = 10485760
+        userInitVersion = 2
 [log]
-	decorate = true
+        decorate = true
 [merge]
-	tool = p4merge
-	conflictstyle = diff3
-	renamelimit = 999999
+        tool = p4merge
+        conflictstyle = diff3
+        renamelimit = 999999
 [mergetool "kdiff3_noauto"]
-	cmd = /p/hdk/rtl/proj_tools/git/da_tools/14.06.0/kdiff3-noauto.sh $TOOL_MODE $base_present $MERGED $LOCAL $REMOTE $BASE
+        cmd = /p/hdk/rtl/proj_tools/git/da_tools/14.06.0/kdiff3-noauto.sh $TOOL_MODE $base_present $MERGED $LOCAL $REMOTE $BASE
 [mergetool "p4merge"]
-	path = /usr/intel/bin/p4merge
+        path = /usr/intel/bin/p4merge
 [pack]
-	threads = 0
+        threads = 0
 [push]
-	default = tracking
+        default = tracking
 [receive]
-	denycurrentbranch = refuse
+        denycurrentbranch = refuse
 [user]
 	useconfigonly = true
 [pull]
