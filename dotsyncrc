@@ -55,7 +55,6 @@ ssh/ssh2_config:.ssh2/ssh2_config
 
 # directories
 bash
-emacs.d
 tmux
 fonts
 meld
