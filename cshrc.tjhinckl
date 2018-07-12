@@ -34,7 +34,7 @@
             if ($TERM == dumb) then
                 set prompt="> "
             else
-                alias precmd '$HOME/scripts/util/print_precmd.sh'
+                alias precmd 'echo "\a" ; $HOME/scripts/print_precmd.sh'
                 set prompt="${green}[${cyan}%d.%T ${magenta}%h${green}]${yellow}%#${end} "
             endif
 
