@@ -61,5 +61,6 @@
 [receive]
 	denycurrentbranch = refuse
 [user]
-	email = troy.j.hinckley@intel.com
-	name = Hinckley, Troy J
+	useconfigonly = true
+[pull]
+	rebase = true
