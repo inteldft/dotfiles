@@ -23,7 +23,7 @@ severity = 3
 severity = 4
 
 [CodeLayout::ProhibitHardTabs]
-severity = 5
+severity = 3
 allow_leading_tabs = 0
 
 [InputOutput::RequireCheckedSyscalls]
@@ -33,8 +33,6 @@ exclude_functions = print say
 short_subroutine_statements = 2
 allow_delegation_to = unpack_hash_arg
 
-[ValuesAndExpressions::ProhibitInterpolationOfLiterals]
-allow_if_string_contains_single_quote = 1
 
 [Variables::ProhibitPunctuationVars]
 allow = $0 $! ${^CHILD_ERROR_NATIVE}
@@ -71,6 +69,7 @@ script_sections = NAME | USAGE    | DESCRIPTION | COPYRIGHT
 
 [-ValuesAndExpressions::ProhibitEmptyQuotes]
 [-ValuesAndExpressions::ProhibitMagicNumbers]
+[-ValuesAndExpressions::ProhibitInterpolationOfLiterals]
 
 [-Miscellanea::ProhibitTies]
 
