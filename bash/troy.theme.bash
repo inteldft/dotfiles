@@ -1,5 +1,10 @@
 #!/usr/intel/bin/bash
 
+normal="\[\e[0m\]"
+bold_red="\[\e[31;1m\]"
+blue="\[\e[0;34m\]"
+green="\[\e[0;32m\]"
+
 __cel_cwd() {
 
     local DIR=${PWD/$HOME/\~}
