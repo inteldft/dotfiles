@@ -1,15 +1,24 @@
+# Emacs is my main editor
 P:emacs 26.1
+# flex and bison versions needed for verilator build
 P:flex 2.5.35
 P:bison 2.1
+# I ran into many bugs with earily versions of bash
 P:bash 4.4
+# I use vim occasnionaly
 P:vim 8.0
+# handle line wrapping properly
 P:less 418
+# external tool builds
 P:autotools 2.69
+# lower versions of ImageMagick are broken
 P:ImageMagick 6.8.9-1
+# there is no working version of perltidy in EC versions
 P:perltidy /usr/intel/pkgs/perl/5.14.1/bin/perltidy
-P:gcc 7.2.0
+# scons is a python based make alternative
 P:scons 2.5.0
+# github does not support old versions of git
 P:git 2.12.0
-# python3 is broken. ESD wont fix. update path instead
 # fix for tramp compressions issues
 P:gzip latest
+# python3 version file is broken. ESD won't fix. Update $PATH instead
