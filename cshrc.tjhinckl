@@ -45,14 +45,11 @@
         source $HOME/.aliases
     endif
 
-    setenv LC_ALL en_US.UTF-8
-    setenv ALL_PROXY http://proxy.${EC_SITE}.intel.com:911
-    setenv HTTP_PROXY $ALL_PROXY
+    # setenv LC_ALL en_US.UTF-8
     setenv GCONFTOOL gconftool-2 # required to configure the theme of Gnome
     setenv VERILATOR_ROOT ~/personal/verilator-3.884 # used to build verilator models
     setenv EDITOR /usr/intel/bin/vim # editor for commit messages and command edits
     setenv INPUTRC $HOME/.inputrc:$INPUTRC
     if ($?EMACS_CAPTURE_ENV) then
 	source /p/hdk/rtl/hdk.rc -cfg shdk74
-	source /p/hdk/cad/spf/latest/bin/spf_setup_env >/dev/null
     endif
