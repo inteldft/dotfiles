@@ -135,7 +135,7 @@ setchassisvars () {
 }
 
 # set the vars required to run ESPF on a SS
-if [[ $EC_SITE == 'sc' ]]; then
+if [[ $EC_SITE != 'fc' ]]; then
     setdftvars () {
         if [[ ! $1 ]]; then
             echo "Error: Need to provide a model to set dft variables"
