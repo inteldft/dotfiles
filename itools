@@ -11,3 +11,5 @@ P:gcc 7.2.0
 P:scons 2.5.0
 P:git 2.12.0
 # python3 is broken. ESD wont fix. update path instead
+# fix for tramp compressions issues
+P:gzip latest
