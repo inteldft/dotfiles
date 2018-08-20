@@ -167,7 +167,10 @@ if [[ $EC_SITE != 'fc' ]]; then
             export TAP2STF_MAP_FILE=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/spf/${1}.tap2stf.map
             export XWEAVE=$MODEL_ROOT/tools/ipgen/${1}/output/dft/verif/xweave/design_report.json
         fi
-        XWEAVE_REPO_ROOT=$(whichip ipconfig/xweave)
+        XWEAVE_REPO_ROOT=$(whichip ipconfig/xweave 2>/dev/null)
+        if [[ ! $XWEAVE_REPO_ROOT ]]; then
+            XWEAVE_REPO_ROOT=$(whichip xweave)
+        fi
         export REGLIST_DIR=$MODEL_ROOT/verif/reglist/${1}/dft
         export ESPF_DIR=${ESPF_DIR-${HOME}/workspace/chassis_dft_val_global/spf_sequences.1p0/scan}
         export DFT_GLOBAL_DIR=${DFT_GLOBAL_DIR-${HOME}/workspace/chassis_dft_val_global}
