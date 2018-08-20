@@ -30,6 +30,7 @@ alias busy="lsof +D"
 alias mem-usage='ps aux --sort -rss'
 alias code-review='/usr/intel/pkgs/ccollab/7.3.7302/ccollabgui &'
 alias mpar='ag --nonumbers focus_stf | sort | uniq'
+alias valid-json='python3.6.3 -m json.tool >/dev/null < '
 
 alias run_dft_ipgen='$DFT_REPO_ROOT/DFTNetworkGen/run_dft_ipgen'
 
