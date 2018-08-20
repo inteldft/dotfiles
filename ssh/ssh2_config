@@ -180,7 +180,7 @@ fort:
 	Host fcab1221.fc.intel.com
 
 pdx:
-	Host plxcb1003.pdx.intel.com
+	Host plxch1011.pdx.intel.com
 
 zone:
-	Host sccj002883.sc.intel.com
+	Host sccj019333.sc.intel.com
