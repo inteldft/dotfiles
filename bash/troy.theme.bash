@@ -11,6 +11,7 @@ __cel_cwd() {
 
     DIR=${DIR/\/nfs\/sc\/disks\/sdg74_1185\/tjhinckl/\~}
     DIR=${DIR/\/nfs\/fc\/disks\/shdk73_0132\/tjhinckl/\~}
+    DIR=${DIR/\/nfs\/pdx\/disks\/sdg74_1172\/tjhinckl/\~}
 
     local names=(${DIR//\// })
 
