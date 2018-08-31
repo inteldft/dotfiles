@@ -15,7 +15,7 @@
 	url = sccj002253.sc.intel.com:~/custom/env_bare/pygments
 [submodule "emacs.d"]
 	path = emacs.d
-	url = sccj002253.sc.intel.com:~/custom/env_bare/emacs
+	url = https://github.com/CeleritasCelery/.emacs.d.git
 [submodule "perl5"]
 	path = perl5
 	url = sccj002253.sc.intel.com:~/custom/env_bare/perl5
