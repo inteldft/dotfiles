@@ -357,7 +357,7 @@ if [[ $EC_SITE == 'sc' || $EC_SITE == 'pdx' ]]; then
             srcenv
         fi
 
-        local cmd="nbjob run --target ${EC_SITE}_normal3 --qslot /SDG/sdg74/fe/rgr/snr/regress --class 'SLES11SP4&&40G' --mode interactive ~/scripts/run_verdi.csh $model $dut $waves"
+        local cmd="nbjob run --target ${EC_SITE}_normal --qslot /SDG/sdg74/fe/rgr/snr/regress --class 'SLES11SP4&&40G' --mode interactive ~/scripts/run_verdi.csh $model $dut $waves"
         echo "$cmd"
         eval "$cmd"
     }
