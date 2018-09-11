@@ -174,10 +174,10 @@ other:
 #       TrustX11Applications no
 
 santa:
-	Host sccj002253.sc.intel.com
+	Host sccj000679.sc.intel.com
 
 fort:
-	Host fcab1221.fc.intel.com
+	Host fcap519.fc.intel.com
 
 pdx:
 	Host plxch1011.pdx.intel.com
