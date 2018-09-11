@@ -21,4 +21,20 @@ P:scons 2.5.0
 P:git 2.12.0
 # fix for tramp compressions issues
 P:gzip latest
-# python3 version file is broken. ESD won't fix. Update $PATH instead
+# use latest of these command line utils
+#browswer
+P:firefox 45ESRa
+P:meld latest
+P:tkdiff latest
+P:tmux latest
+P:graphviz 2.40.1
+P:the_silver_searcher 2.1.0
+
+# python3 version file is broken. ESD won't fix. Update $PATH instead.
+# You can find version in /usr/intel/bin directly
+
+# if these are enabled all the time, some intel tools will fail. only
+# use them when needed.
+# P:gcc 8.1.0
+# P:curl 7.58.0.a
+# P:cmake 3.12.0
