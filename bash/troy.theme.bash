@@ -40,7 +40,7 @@ get_exit_code() {
 }
 
 __cel_env_setup() {
-    if [[ $PATH =~ proj_tools ]]; then
+    if [[ $RTL_PROJ_LIB  ]]; then
         echo "${green}◉${normal}"
     fi
 }
