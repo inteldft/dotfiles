@@ -5,6 +5,7 @@ alias rp=realpath
 alias cdm='cd $MODEL_ROOT'
 
 alias timer='/usr/bin/time --format="TIMER: %C finished in %e seconds"'
+alias emacs='srcenv && emacs'
 
 alias win-xl='xrandr -s 1920x1200'
 alias win-l='xrandr -s 1920x1080'
