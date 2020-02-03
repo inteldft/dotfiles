@@ -10,25 +10,30 @@ __cel_cwd() {
     local DIR=${PWD/$HOME/\~}
 
     DIR=${DIR/\/nfs\/sc\/disks\/sdg74_1185\/tjhinckl/\~}
+    DIR=${DIR/\/nfs\/sc\/disks\/sdg74_1827\/tjhinckl/\~}
     DIR=${DIR/\/nfs\/fc\/disks\/shdk73_0132\/tjhinckl/\~}
     DIR=${DIR/\/nfs\/pdx\/disks\/sdg74_1172\/tjhinckl/\~}
 
     local names=(${DIR//\// })
 
-    local base=${names[-1]}
-    unset "names[${#names[@]}-1]"
+    if [[ "${#names[@]}" -gt 0 ]]; then
+        local base=${names[-1]}
+        unset "names[${#names[@]}-1]"
 
-    for i in "${!names[@]}"; do
-        names[$i]=${names[$i]:0:$BASH_PROMPT_PWD_DIR_LENGTH};
-    done
+        for i in "${!names[@]}"; do
+            names[$i]=${names[$i]:0:$BASH_PROMPT_PWD_DIR_LENGTH};
+        done
 
-    names+=($base)
-    DIR=$(IFS="/" ; echo "${names[*]}")
-    if [[ ${DIR:0:1} != "~" ]]; then
-        DIR="/$DIR"
+        names+=($base)
+        DIR=$(IFS="/" ; echo "${names[*]}")
+        if [[ ${DIR:0:1} != "~" ]]; then
+            DIR="/$DIR"
+        fi
+
+        echo "${blue}$DIR${normal}"
+    else
+        echo $DIR
     fi
-
-    echo "${blue}$DIR${normal}"
 }
 
 get_exit_code() {
