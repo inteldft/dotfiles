@@ -63,6 +63,16 @@ count() {
     find "${1:-.}" -maxdepth 1 -type f | wc -l
 }
 
+save_env () {
+    # only save the env if a nonexcluded enviroment variable has changed.
+    # This keeps Emacs from reload this file after every prompt
+    changes=($(sed -r '/^(PS1|PWD|OLDPWD|COLUNMS)/d' <(grep -Fxvf /tmp/$$.env <(env))))
+
+    if [[ ${#changes[@]} != '0' ]]; then
+        env > /tmp/$$.env
+    fi
+}
+
 rename() {
     if [[ ! $1 ]]; then
         echo "USAGE: rename <perl substitution regex>"
