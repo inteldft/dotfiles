@@ -6,6 +6,7 @@ alias cdm='cd $MODEL_ROOT'
 
 alias timer='/usr/bin/time --format="TIMER: %C finished in %e seconds"'
 alias emacs='srcenv && emacs'
+alias ag='ag --follow --search-zip --color-match="1;31" --smart-case'
 
 alias win-xl='xrandr -s 1920x1200'
 alias win-l='xrandr -s 1920x1080'
