@@ -768,3 +768,22 @@ pdx:
 zone:
   Host sccj019338.sc.intel.com
 #+END_SRC
+
+* Meld
+:PROPERTIES:
+:header-args: :tangle ~/.meld/meldrc.ini
+:END:
+
+#+BEGIN_SRC conf
+[DEFAULT]
+window_size_x = 2000
+window_size_y = 1000
+regexes = CVS keywords	0	\$\w+(:[^\n$]+)?\$
+	C++ comment	0	//.*
+	C comment	0	/\*.*?\*/
+	All whitespace	1	[ \t\r\f\v]*
+	Leading whitespace	1	^[ \t\r\f\v]*
+	Script comment	0	#.*
+	mdf	1	(s_v|s_h)
+ignore_blank_lines = True
+#+END_SRC
