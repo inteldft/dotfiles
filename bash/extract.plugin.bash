@@ -40,7 +40,7 @@ End-Of-Usage
                 *.pkg) pkgutil --expand "$1" "${1:0:-4}" ;;
                 *.rar) unrar x "$1" ;;
                 *.rpm) rpm2cpio "$1" | cpio -idm${verbose} ;;
-                *.tar) tar "x${verbose}f" "$1" ;;
+                *.tar|*.gtar) tar "x${verbose}f" "$1" ;;
                 *.txz) mv "$1" "${1:0:-4}.tar.xz"; set -- "$@" "${1:0:-4}.tar.xz" ;;
                 *.xz) xz --decompress "$1" ;;
                 *.zip|*.war|*.jar) unzip "$1" ;;
