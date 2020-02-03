@@ -1,0 +1,653 @@
+#+title: RC and dot files for Intel
+
+* Git
+:PROPERTIES:
+:header-args: :tangle ~/.gitconfig :padline no
+:END:
+
+[[https://git-scm.com/docs/git-config][Documentation]]
+** Aliases
+Alias to show all commits that I added, show all commits by author, as well as shorteners
+#+BEGIN_SRC conf
+[alias]
+        aliases = !git config --get-regexp 'alias.*' | colrm 1 6 | sed 's/[ ]/ = /'
+        ci = commit
+        co = checkout
+        unmerged = diff --name-only --diff-filter=U
+        root = rev-parse --show-toplevel
+        st = status -uno
+        df = diff -w
+        bl = blame -wM
+#+END_SRC
+
+** other
+Since I want my work repos to have work credentials, and my private
+repos to have private credentials, don't set the credentials here but
+instead force them to be set in every repo
+#+BEGIN_SRC conf
+[user]
+        useconfigonly = true
+#+END_SRC
+
+Always rebase, never merge.
+#+BEGIN_SRC conf
+[pull]
+        rebase = true
+#+END_SRC
+
+Setup the proxy for access to external git repos
+#+BEGIN_SRC conf
+[http]
+        proxy = https://proxy-chain.intel.com:912
+#+END_SRC
+
+Make new repos RW for me but read only for group
+#+BEGIN_SRC conf
+[core]
+        sharedrepository = 0640
+#+END_SRC
+
+Use Mnemonic prefix's in diffs instead of the standard =a/= and =b/=
+| prefix | meaning  |
+|--------+----------|
+| i      | index    |
+| w      | worktree |
+| c      | commit   |
+| o      | object   |
+
+#+BEGIN_SRC conf
+[diff]
+        mnemonicprefix = true
+#+END_SRC
+
+Special Intel config parameters
+#+BEGIN_SRC conf
+[intel]
+        clone-minimum-free-kb = 10485760
+        userInitVersion = 2
+#+END_SRC
+
+Show the original text in merge conflict
+#+BEGIN_SRC conf
+[merge]
+        conflictstyle = diff3
+#+END_SRC
+
+Auto detect the number of threads when doing delta resolution
+#+BEGIN_SRC conf
+[pack]
+        threads = 0
+#+END_SRC
+
+* iTools
+:PROPERTIES:
+:header-args: :tangle ~/.itools :padline no
+:END:
+Intel tool version management. The latest pointer is no longer
+supported, so use explicit versions always
+
+[[https://intelpedia.intel.com/Itools][Documentation]]
+
+Use latest emacs duh
+#+BEGIN_SRC conf
+P:emacs 26.3
+#+END_SRC
+
+Tool versions needed for verilator
+#+BEGIN_SRC conf
+P:flex 2.5.35
+P:bison 2.1
+#+END_SRC
+
+Early version of bash have a lot of bugs
+#+BEGIN_SRC conf
+P:bash 4.4
+#+END_SRC
+
+Required to handle line wrapping
+#+BEGIN_SRC conf
+P:less 418
+#+END_SRC
+
+Lower version are broken
+#+BEGIN_SRC conf
+P:ImageMagick 6.8.9-1
+#+END_SRC
+
+Github does not support older version of git. Also old versions don't
+support work trees
+#+BEGIN_SRC conf
+P:git 2.12.0a
+#+END_SRC
+
+Try to fix tramp compression issue
+#+BEGIN_SRC conf
+P:gzip 1.6
+#+END_SRC
+
+Needed for PDF tools
+#+BEGIN_SRC conf
+P:autotools 2.69
+#+END_SRC
+
+Use the latest version of these commands
+#+BEGIN_SRC conf
+P:vim 8.0
+P:firefox 45ESRa
+P:meld 3.19.0
+P:tkdiff 4.2
+P:tmux 2.7
+P:graphviz 2.40.1
+P:the_silver_searcher 2.1.0
+P:tcsh 6.18.01
+P:tcl-tk 8.6.8
+P:curl 7.58.0.a
+#+END_SRC
+
+If you enable these all the time, some Intel tools will fail. Only
+turn them on when needed.
+#+BEGIN_SRC conf :tangle no
+P:gcc 8.1.0
+P:cmake 3.12.0
+#+END_SRC
+
+* bash
+:PROPERTIES:
+:header-args: :tangle ~/.bashrc.tjhinckl
+:END:
+
+Clear the environment
+#+BEGIN_SRC bash
+#!/usr/intel/bin/bash
+unset PERL5LIB
+unset PROMPT_COMMAND
+#+END_SRC
+
+** Environment variables
+Setup proxies for outside access
+#+BEGIN_SRC bash
+export http_proxy="http://proxy-chain.intel.com:911"
+export https_proxy="https://proxy-chain.intel.com:912"
+export no_proxy=intel.com,localhost,127.0.0.1
+export NO_PROXY=$no_proxy
+#+END_SRC
+
+Required to configure the theme of Gnome
+#+BEGIN_SRC bash
+export GCONFTOOL=gconftool-2
+#+END_SRC
+
+Use a working version of git. Can't make this the default because
+Intel still relies on git 1.8 but I need a way to quickly access
+modern git
+#+BEGIN_SRC bash
+export git=/usr/intel/bin/git
+#+END_SRC
+
+other
+#+BEGIN_SRC bash
+export HISTCONTROL=ignoreboth
+export EDITOR=/usr/intel/bin/vim
+export VERILATOR_ROOT=~/personal/verilator-3.884
+export SHELL=/usr/intel/bin/bash
+export LC_ALL=en_US.UTF-8
+#+END_SRC
+
+If not in an interactive shell, stop here
+#+BEGIN_SRC bash
+if [[ -z ${PS1+x} ]]; then
+    return
+fi
+#+END_SRC
+
+** shopt
+Use extended globs. =pattern-list='s are bar separated wild card patterns  like =(foo|baz)=
+| pattern         | meaning                                                |
+|-----------------+--------------------------------------------------------|
+| ?(pattern-list) | Matches zero or one occurrence of the given patterns   |
+| *(pattern-list) | Matches zero or more occurrences of the given patterns |
+| +(pattern-list) | Matches one or more occurrences of the given patterns  |
+| @(pattern-list) | Matches one of the given patterns                      |
+| !(pattern-list) | Matches anything except one of the given patterns      |
+#+BEGIN_SRC bash
+shopt -s extglob
+#+END_SRC
+
+save multiline commands as one command
+#+BEGIN_SRC bash
+shopt -s cmdhist
+#+END_SRC
+
+change directories without cd command. I.e. =..= will move up a directory.
+ #+BEGIN_SRC bash
+shopt -s autocd
+ #+END_SRC
+
+Automatically fix path spelling errors
+#+BEGIN_SRC bash
+shopt -s cdspell
+shopt -s dirspell
+#+END_SRC
+
+Update the window size after every command. Useful when running
+complex stuff in the terminal
+#+BEGIN_SRC bash
+shopt -s checkwinsize
+#+END_SRC
+
+Use =**= to make a recursive glob
+#+BEGIN_SRC bash
+shopt -s globstar
+#+END_SRC
+
+Give me a chance to edit history commands before I run them
+#+BEGIN_SRC bash
+shopt -s histverify
+#+END_SRC
+
+Don't attempt completion on empty commands because it can be super
+SLOW
+#+BEGIN_SRC bash
+shopt -s no_empty_cmd_completion
+#+END_SRC
+
+** config
+Fix the backspace key
+#+BEGIN_SRC bash
+[[ -t 0 ]] && stty erase '^?'
+#+END_SRC
+
+Load custom functions
+#+BEGIN_SRC bash
+for f in ~/.bash/*.bash; do source $f; done
+#+END_SRC
+
+Update my path with custom locations. =munge= is custom function I wrote
+to make sure that elements are not added to the path more then once.
+#+BEGIN_SRC bash
+munge PATH ~/bin
+munge PATH ~/local/bin
+munge PATH ~/.local/bin
+munge PATH /usr/intel/bin
+munge MANPATH ~/.local/share/man
+munge PATH /nfs/sc/disks/sdg74_1309/sw/bin
+#+END_SRC
+
+Add perl local libraries to path
+#+BEGIN_SRC bash
+if [[ -d ~/perl5 ]]; then
+    eval "$(perl -I"$HOME"/perl5/lib/perl5 -Mlocal::lib)"
+    munge -end PATH ~/perl5/bin
+    munge MANPATH ~/perl5/man
+fi
+#+END_SRC
+
+** Emacs completion
+I prefer to run my shells inside emacs, but this has two problems.
+First is that we can't use TTY pagers and second that we can't know
+what the shell cwd is. This fixes both of those issue.
+#+BEGIN_SRC bash
+if [[ $INSIDE_EMACS ]]; then
+    export PAGER=cat
+fi
+#+END_SRC
+
+** readline
+If line editing is enabled, setup the readline interactive environment
+#+BEGIN_SRC bash
+if [[ "${SHELLOPTS}" =~ :(emacs|vi): ]]; then
+#+END_SRC
+
+Color the common prefix in completion
+#+BEGIN_SRC bash
+    bind "set colored-completion-prefix on"
+#+END_SRC
+
+Append ~/~ to symlinked directories
+#+BEGIN_SRC bash
+    bind "set mark-symlinked-directories on"
+#+END_SRC
+
+Never use a pager to display completions
+#+BEGIN_SRC bash
+    bind "set page-completions off"
+#+END_SRC
+
+If there is no common prefix, always show the completions
+#+BEGIN_SRC bash
+    bind "set show-all-if-unmodified on"
+#+END_SRC
+
+If completing on the middle of a word, don't add text that is already present
+#+BEGIN_SRC bash
+    bind "set skip-completed-text on"
+#+END_SRC
+
+When navigating history, don't move the cursor
+#+BEGIN_SRC bash
+    bind "set history-preserve-point on"
+#+END_SRC
+
+Use the visible bell if available
+#+BEGIN_SRC bash
+    bind "set bell-style visible"
+#+END_SRC
+
+Use up/down arrow to go through history items that match a common prefix.
+#+BEGIN_SRC bash
+    bind '"[A":history-search-backward'
+    bind '"[B":history-search-forward'
+#+END_SRC
+
+#+BEGIN_SRC bash
+fi
+#+END_SRC
+
+** Theme
+I have made my custom theme that is designed to be smart and simple.
+It uses fish-like path shortening in the prompt. It will also display
+the exit code and run of time of commands when appropriate. Need some
+minimal setup here to make sure these functions are at the end of
+=PROMPT_COMMAND=.
+#+BEGIN_SRC bash
+export BASH_PROMPT_PWD_DIR_LENGTH=5
+munge -cmd -end PROMPT_COMMAND prompt_command
+munge -cmd PROMPT_COMMAND get_exit_code
+#+END_SRC
+
+* Tcsh
+:PROPERTIES:
+:header-args: :tangle ~/.cshrc.tjhinckl
+:END:
+
+** environment variables
+#+BEGIN_SRC sh
+#!/usr/intel/bin/tcsh -f
+setenv TERM xterm-256color
+setenv GCONFTOOL gconftool-2
+setenv VERILATOR_ROOT ~/custom/verilator-3.884
+setenv EDITOR /usr/intel/bin/vim
+setenv INPUTRC $HOME/.inputrc:$INPUTRC
+#+END_SRC
+
+** config
+#+BEGIN_SRC sh
+modpath -q -f $HOME/bin
+#+END_SRC
+
+Fix backspace
+#+BEGIN_SRC sh
+stty erase '^?'
+#+END_SRC
+
+the shell tries to construct a current directory relative to the
+current directory before the link was crossed. This means that cding
+through a symbolic link and then =cd ..= returns one to the
+original directory. This affects only builtin commands and filename
+completion.
+#+BEGIN_SRC sh
+set symlinks = ignore
+#+END_SRC
+
+Don't ring the audible bell
+#+BEGIN_SRC sh
+set noding
+#+END_SRC
+
+Use =C-r= to do a reverse I search  of command history
+#+BEGIN_SRC sh
+bindkey "^R" i-search-back
+#+END_SRC
+
+Increase the limit before asking about showing all completions
+#+BEGIN_SRC sh
+set listmax=5000
+set listmaxrows=500
+#+END_SRC
+
+** prompt
+
+This simple propt will do.
+#+BEGIN_SRC sh
+set     red="%{\033[31m%}"
+set   green="%{\033[32m%}"
+set  yellow="%{\033[33m%}"
+set    blue="%{\033[34m%}"
+set magenta="%{\033[35m%}"
+set    cyan="%{\033[36m%}"
+set   white="%{\033[37m%}"
+set     end="%{\033[0m%}"
+
+unset red green yellow blue magenta cyan yellow white end
+#+END_SRC
+
+** aliases
+Set VNC size
+#+BEGIN_SRC sh
+# $Source: /usr/cvs/cvsrep/ec_environ-1.0/release/user/aliases,v $
+alias win-xl 'xrandr -s 1920x1200'
+alias win-l 'xrandr -s 1920x1080'
+alias win-m 'xrandr -s 1536x864'
+#+END_SRC
+
+Use this command for really wide pager inputs
+#+BEGIN_SRC sh
+alias wl 'less -S -# 15'
+#+END_SRC
+
+Setup the HDK
+#+BEGIN_SRC sh
+alias srcenv 'source /p/hdk/rtl/hdk.rc -cfg shdk74'
+#+END_SRC
+
+Convenience aliases
+#+BEGIN_SRC sh
+alias rp realpath
+alias grep 'grep --color=auto'
+alias cdm 'cd $MODEL_ROOT'
+#+END_SRC
+
+* agignore
+:PROPERTIES:
+:header-args: :tangle ~/.agignore
+:END:
+
+#+BEGIN_SRC conf
+*.xlsx
+*.waiv
+*.dat
+#+END_SRC
+
+* Perl
+
+** perlcritic
+:PROPERTIES:
+:header-args: :tangle ~/.perlcriticrc
+:END:
+
+[[https://fastapi.metacpan.org/source/THALJEF/Perl-Critic-1.121/examples/perlcriticrc][Example]]
+
+[[https://metacpan.org/release/THALJEF/Perl-Critic-1.126][Documentation]]
+
+Be brutally pedantic
+#+BEGIN_SRC conf
+severity = 1
+top = 100
+#+END_SRC
+
+include espf files
+#+BEGIN_SRC conf
+program-extensions = .espf
+#+END_SRC
+
+Adjust the severity of these policies
+#+BEGIN_SRC conf
+[Subroutines::ProhibitAmpersandSigils]
+severity = 2
+[InputOutput::ProhibitTwoArgOpen]
+severity = 3
+[InputOutput::ProhibitBarewordFileHandles]
+severity = 3
+[Subroutines::ProhibitSubroutinePrototypes]
+severity = 4
+[ValuesAndExpressions::ProhibitNoisyQuotes]
+severity = 1
+[Variables::ProhibitConditionalDeclarations]
+severity = 3
+[CodeLayout::ProhibitTrailingWhitespace]
+severity = 3
+[Modules::RequireEndWithOne]
+severity = 4
+#+END_SRC
+
+Never allow tabs in a file
+#+BEGIN_SRC conf
+[CodeLayout::ProhibitHardTabs]
+severity = 3
+allow_leading_tabs = 0
+#+END_SRC
+
+Don't require a check of every print statement
+#+BEGIN_SRC conf
+[InputOutput::RequireCheckedSyscalls]
+exclude_functions = print say
+#+END_SRC
+
+Allow my help function ~unpack_hash_arg~ to unpack arguments
+#+BEGIN_SRC conf
+[Subroutines::RequireArgUnpacking]
+short_subroutine_statements = 2
+allow_delegation_to = unpack_hash_arg
+#+END_SRC
+
+There are some punctuation variables that I like
+#+BEGIN_SRC conf
+[Variables::ProhibitPunctuationVars]
+allow = $0 $! ${^CHILD_ERROR_NATIVE}
+
+[Variables::RequireLocalizedPunctuationVars]
+allow = %ENV %SIG
+#+END_SRC
+
+Allow common forms to have no warnings
+#+BEGIN_SRC conf
+[TestingAndDebugging::ProhibitNoWarnings]
+allow = qw once
+#+END_SRC
+
+Pod sections I typically see at intel
+#+BEGIN_SRC conf
+[Documentation::RequirePodSections]
+lib_sections    = NAME | SYNOPSIS | DESCRIPTION | COPYRIGHT
+script_sections = NAME | USAGE    | DESCRIPTION | COPYRIGHT
+#+END_SRC
+
+Disabled policies
+#+BEGIN_SRC conf
+[-CodeLayout::ProhibitParensWithBuiltins]
+[-CodeLayout::RequireTidyCode]
+
+[-ControlStructures::ProhibitPostfixControls]
+[-ControlStructures::ProhibitUnlessBlocks]
+
+[-Documentation::PodSpelling]
+
+[-InputOutput::RequireBriefOpen]
+[-InputOutput::RequireCheckedClose]
+
+[-Modules::RequireVersionVar]
+[-Modules::ProhibitAutomaticExportation]
+
+[-RegularExpressions::ProhibitEnumeratedClasses]
+[-RegularExpressions::RequireDotMatchAnything]
+[-RegularExpressions::RequireExtendedFormatting]
+[-RegularExpressions::RequireLineBoundaryMatching]
+
+[-ValuesAndExpressions::ProhibitEmptyQuotes]
+[-ValuesAndExpressions::ProhibitMagicNumbers]
+[-ValuesAndExpressions::ProhibitInterpolationOfLiterals]
+
+[-Miscellanea::ProhibitTies]
+
+[-BuiltinFunctions::ProhibitStringyEval]
+
+[-ValuesAndExpressions::RequireNumberSeparators]
+
+[-Variables::ProhibitPackageVars]
+#+END_SRC
+
+** perltidy
+:PROPERTIES:
+:header-args: :tangle ~/.perltidyrc
+:END:
+
+[[http://perltidy.sourceforge.net/perltidy.html][Documentation]]
+
+Some of these are set to their defaults explicitly to indicate that I
+have studied that option and consider its default preferable. Anything
+that is not explicit has not been reviewed.
+
+| option                         | default | override |
+|--------------------------------+---------+----------|
+| maximum-line-length            |      80 |      130 |
+| indent-columns                 |       4 |        4 |
+| continuation-indentation       |       2 |        4 |
+| closing-token-indentation      |       0 |        0 |
+| vertical-tightness             |       0 |        0 |
+| vertical-tightness-closing     |       0 |        0 |
+| paren-tightness                |       1 |        2 |
+| brace-tightness                |       1 |        1 |
+| square-bracket-tightness       |       1 |        1 |
+| block-brace-tightness          |       0 |        0 |
+| cuddled-else                   |   False |     True |
+| nospace-for-semicolon          |   False |     True |
+| nooutdent-long-lines           |   False |     True |
+| break-at-old-comma-breakpoints |   False |     True |
+| variable-maximum-line-length   |   False |     True |
+
+Line length
+#+BEGIN_SRC sh
+--maximum-line-length=130
+#+END_SRC
+
+Indentation
+#+BEGIN_SRC sh
+--indent-columns=4
+--continuation-indentation=4
+--closing-token-indentation=0
+#+END_SRC
+
+tightness
+#+BEGIN_SRC sh
+--vertical-tightness=0
+--vertical-tightness-closing=0
+--paren-tightness=2
+--brace-tightness=1
+--square-bracket-tightness=1
+--block-brace-tightness=0
+--cuddled-else
+#+END_SRC
+
+other
+#+BEGIN_SRC sh
+--nospace-for-semicolon
+--nooutdent-long-lines
+--break-at-old-comma-breakpoints
+#+END_SRC
+
+This is not supported in the 2009 (intel default) version of perl tidy.
+#+BEGIN_SRC sh
+--variable-maximum-line-length
+#+END_SRC
+
+*** minimal config
+To get these same settings on the command line with minimal  options you can use the following commands
+
+#+BEGIN_SRC sh :tangle no
+-l=130 -ci=4 -pt=2 -boc -vmll -ce
+#+END_SRC
+
+
+# Local Variables:
+# org-src-preserve-indentation: t
+# End:
