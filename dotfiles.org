@@ -787,3 +787,36 @@ regexes = CVS keywords	0	\$\w+(:[^\n$]+)?\$
 	mdf	1	(s_v|s_h)
 ignore_blank_lines = True
 #+END_SRC
+
+* Vim
+:PROPERTIES:
+:header-args: :tangle ~/.vimrc
+:END:
+
+very basic vimrc file
+#+BEGIN_SRC conf
+syntax on
+set expandtab
+set number
+set showcmd
+set lazyredraw
+set showmatch
+set incsearch
+#+END_SRC
+
+This is a function I stole from [[https://vim.fandom.com/wiki/Backspace_and_delete_problems][vimwiki]] for how to fix the backspace key. Not really sure what it even does, but it works!
+#+BEGIN_SRC conf
+func Backspace()
+  if col('.') == 1
+    if line('.')  != 1
+      return  "\<ESC>kA\<Del>"
+    else
+      return ""
+    endif
+  else
+    return "\<Left>\<Del>"
+  endif
+endfunc
+
+inoremap <BS> <c-r>=Backspace()<CR>
+#+END_SRC
