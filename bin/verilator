@@ -1,0 +1,2 @@
+#!/bin/sh
+exec ~/custom/verilator-3.884/bin/verilator "$@"
