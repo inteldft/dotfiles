@@ -188,7 +188,7 @@ other
 #+BEGIN_SRC bash
 export HISTCONTROL=ignoreboth
 export EDITOR=/usr/intel/bin/vim
-export VERILATOR_ROOT=~/personal/verilator-3.884
+export VERILATOR_ROOT=~/custom/verilator-3.884
 export SHELL=/usr/intel/bin/bash
 export LC_ALL=en_US.UTF-8
 #+END_SRC
