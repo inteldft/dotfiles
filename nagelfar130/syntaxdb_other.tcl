@@ -1,0 +1,2 @@
+lappend ::knownCommands dict_to_json dict_of_dicts_to_json dict_of_lists_to_json list_to_json mkdir_fresh get_all_sorted_commands
+source /nfs/site/home/tjhinckl/custom/nagelfar130/syntaxdb_tessent.tcl
