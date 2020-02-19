@@ -132,7 +132,7 @@ P:autotools 2.69
 
 Use the latest version of these commands
 #+BEGIN_SRC conf
-P:vim 8.0
+P:vim 8.1.1561
 P:firefox 45ESRa
 P:meld 3.19.0
 P:tkdiff 4.2
@@ -802,6 +802,15 @@ set showcmd
 set lazyredraw
 set showmatch
 set incsearch
+#+END_SRC
+
+Setup indentation standard
+#+BEGIN_SRC conf
+  set tabstop     =4  " Width of tab character
+  set softtabstop =4  " Fine tunes the amount of white space to be added
+  set shiftwidth  =4  " Determines the amount of whitespace to add in normal mode
+  set expandtab       " When on uses space instead of tabs
+  filetype plugin indent on "Enable indentation engine
 #+END_SRC
 
 This is a function I stole from [[https://vim.fandom.com/wiki/Backspace_and_delete_problems][vimwiki]] for how to fix the backspace key. Not really sure what it even does, but it works!
