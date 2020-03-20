@@ -40,13 +40,7 @@ get_exit_code() {
     exit_code=$?
     __code_st=""
     if [[ $exit_code != 0 ]]; then
-        __code_st="[${bold_red}✘${normal}]"
-    fi
-}
-
-__cel_env_setup() {
-    if [[ $RTL_PROJ_LIB  ]]; then
-        echo "${green}◉${normal}"
+        __code_st="|${bold_red}✘${normal}"
     fi
 }
 
@@ -65,19 +59,18 @@ __cmd_time () {
     local hour=$(echo "scale=1; $min/60" | bc)
 
     if [ "$(echo "$hour > 1" | bc)" == 1 ]; then
-        echo "[${orange}${hour}h${normal}]";
+        echo "|${orange}${hour}h${normal}";
     elif [ "$(echo "$min > 1" | bc)" == 1 ]; then
-        echo "[${yellow}${min}m${normal}]";
+        echo "|${yellow}${min}m${normal}";
     elif [ "$(echo "$sec >= 1" | bc)" == 1 ]; then
-        echo "[${normal}${sec}s${normal}]";
+        echo "|${normal}${sec}s${normal}";
     fi
 }
 
 prompt_command() {
     timer_show=$(($(($(date +%s%N)/1000000)) - $timestamp))
     unset timestamp
-    PS1="\n╭─$__code_st$(__cmd_time)[$(__cel_cwd)]$(__cel_env_setup)\n╰─→ "
-
+    PS1="$__code_st$(__cmd_time)|$(__cel_cwd)|→ "
 }
 
-PS2='╰─→ '
+PS2='→ '
