@@ -6,9 +6,13 @@
 setmodel () {
     export MANUAL_MODEL_ROOT=t
 
-    ###########################
-    # get the model of the IP #
-    ###########################
+    if (( $# == 0 )); then
+        # If given nothing find the current git root
+        MODEL_ROOT="$(git rev-parse --show-toplevel)"
+        echo "\$MODEL_ROOT=$MODEL_ROOT"
+        export MODEL_ROOT
+        return
+    fi
 
     if [[ -d $1 ]]; then
         # if given a directory set model root to that
@@ -17,6 +21,10 @@ setmodel () {
         return
     fi
 
+    ###########################
+    # get the model of the IP #
+    ###########################
+
     if [[ ! $IP_MODELS ]]; then
         echo "source dev env first (srcenv)"
         return
@@ -24,10 +32,7 @@ setmodel () {
 
     local model
 
-    if [[ $1 == chassis ]]; then
-        model=$IP_RELEASES/dft_ipgen_chassis
-
-    elif [[ -d $IP_MODELS/$1 ]]; then
+    if [[ -d $IP_MODELS/$1 ]]; then
         # use arg if resolvable IP name
         model=$IP_MODELS/$1
 
