@@ -1060,7 +1060,7 @@ proc parseVar {str len index iName knownVarsName} {
                 }
             }
         } else {
-            errorMsg E "Unknown variable \"$var\"" $index 1
+            # errorMsg E "Unknown variable \"$var\"" $index 1
         }
     }
     if {[dict exists $knownVars $var] && ![dict get $knownVars $var set]} {
@@ -4072,7 +4072,7 @@ proc parseScript {script} {
             if {$cmd ne "\}"} {
                 # Different messages depending on name
                 if {[regexp {^(?:(?:[\w',:.-]+)|(?:%W))$} $cmd]} {
-                    errorMsg W "Unknown command \"$cmd\"" $index
+                    # errorMsg W "Unknown command \"$cmd\"" $index
                 } else {
                     errorMsg E "Strange command \"$cmd\"" $index
                 }
