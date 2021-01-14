@@ -6,21 +6,7 @@
 :END:
 
 [[https://git-scm.com/docs/git-config][Documentation]]
-** Aliases
-Alias to show all commits that I added, show all commits by author, as well as shorteners
-#+BEGIN_SRC conf
-[alias]
-        aliases = !git config --get-regexp 'alias.*' | colrm 1 6 | sed 's/[ ]/ = /'
-        ci = commit
-        co = checkout
-        unmerged = diff --name-only --diff-filter=U
-        root = rev-parse --show-toplevel
-        st = status -uno
-        df = diff -w
-        bl = blame -wM
-#+END_SRC
 
-** other
 Since I want my work repos to have work credentials, and my private
 repos to have private credentials, don't set the credentials here but
 instead force them to be set in every repo
@@ -114,8 +100,12 @@ Lower version are broken
 P:ImageMagick 6.8.9-1
 #+END_SRC
 
-Github does not support older version of git. Also old versions don't
-support work trees
+Github does not support version of git older then 2.0 (And the intel default
+version is 1.8 which came out 10 years ago!). Also old versions don't support
+work trees. However the SSL certificate used in 2.12 version has issues with
+some websites, in particular the org-mode repo. In that case we can use 2.8.4a
+which has a valid SSL certificate for all websites I can find. But I don't want
+to use that for all git needs because 2.12 is a little faster.
 #+BEGIN_SRC conf
 P:git 2.12.0a
 #+END_SRC
@@ -156,39 +146,24 @@ P:cmake 3.12.0
 :header-args: :tangle ~/.bashrc.tjhinckl
 :END:
 
-Clear the environment
 #+BEGIN_SRC bash
 #!/usr/intel/bin/bash
-unset PERL5LIB
-unset PROMPT_COMMAND
 #+END_SRC
 
 ** Environment variables
-Setup proxies for outside access
+Clear the environment
 #+BEGIN_SRC bash
-export http_proxy="http://proxy-chain.intel.com:911"
-export https_proxy="https://proxy-chain.intel.com:912"
-export no_proxy=intel.com,localhost,127.0.0.1
-export NO_PROXY=$no_proxy
+unset PROMPT_COMMAND
 #+END_SRC
 
-Required to configure the theme of Gnome
-#+BEGIN_SRC bash
-export GCONFTOOL=gconftool-2
-#+END_SRC
-
-Use a working version of git. Can't make this the default because
-Intel still relies on git 1.8 but I need a way to quickly access
-modern git
-#+BEGIN_SRC bash
-export git=/usr/intel/bin/git
-#+END_SRC
-
-other
+Ignore space and ignore duplicates in history
 #+BEGIN_SRC bash
 export HISTCONTROL=ignoreboth
+#+END_SRC
+
+Set standard tools
+#+BEGIN_SRC bash
 export EDITOR=/usr/intel/bin/vim
-export VERILATOR_ROOT=~/custom/verilator-3.884
 export SHELL=/usr/intel/bin/bash
 export LC_ALL=en_US.UTF-8
 #+END_SRC
@@ -274,21 +249,11 @@ munge PATH /nfs/sc/disks/sdg74_1309/sw/bin
 #+END_SRC
 
 Add perl local libraries to path
-#+BEGIN_SRC bash
+#+BEGIN_SRC bash :tangle no
 if [[ -d ~/perl5 ]]; then
     eval "$(perl -I"$HOME"/perl5/lib/perl5 -Mlocal::lib)"
     munge -end PATH ~/perl5/bin
     munge MANPATH ~/perl5/man
-fi
-#+END_SRC
-
-** Emacs completion
-I prefer to run my shells inside emacs, but this has two problems.
-First is that we can't use TTY pagers and second that we can't know
-what the shell cwd is. This fixes both of those issue.
-#+BEGIN_SRC bash
-if [[ $INSIDE_EMACS ]]; then
-    export PAGER=cat
 fi
 #+END_SRC
 
@@ -370,6 +335,21 @@ setenv EDITOR /usr/intel/bin/vim
 setenv INPUTRC $HOME/.inputrc:$INPUTRC
 #+END_SRC
 
+Setup proxies for outside access
+#+BEGIN_SRC bash
+  setenv http_proxy "http://proxy-chain.intel.com:911"
+  setenv https_proxy "https://proxy-chain.intel.com:912"
+  setenv no_proxy intel.com,localhost,127.0.0.1
+  setenv NO_PROXY $no_proxy
+#+END_SRC
+
+Use a working version of git. Can't make this the default because
+Intel still relies on git 1.8 but I need a way to quickly access
+modern git
+#+BEGIN_SRC bash
+setenv git /usr/intel/bin/git
+#+END_SRC
+
 ** config
 #+BEGIN_SRC sh
 modpath -q -f $HOME/bin
@@ -397,12 +377,6 @@ set noding
 Use =C-r= to do a reverse I search  of command history
 #+BEGIN_SRC sh
 bindkey "^R" i-search-back
-#+END_SRC
-
-Increase the limit before asking about showing all completions
-#+BEGIN_SRC sh
-set listmax=5000
-set listmaxrows=500
 #+END_SRC
 
 ** prompt
