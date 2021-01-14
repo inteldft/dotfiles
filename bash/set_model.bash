@@ -8,7 +8,7 @@ setmodel () {
 
     if (( $# == 0 )); then
         # If given nothing find the current git root
-        MODEL_ROOT="$(git rev-parse --show-toplevel)"
+        MODEL_ROOT="$(/usr/intel/pkgs/git/2.8.4a/bin/git rev-parse --show-toplevel)"
         echo "\$MODEL_ROOT=$MODEL_ROOT"
         export MODEL_ROOT
         return
