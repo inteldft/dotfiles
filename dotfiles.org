@@ -7,20 +7,6 @@
 
 [[https://git-scm.com/docs/git-config][Documentation]]
 
-Since I want my work repos to have work credentials, and my private
-repos to have private credentials, don't set the credentials here but
-instead force them to be set in every repo
-#+BEGIN_SRC conf
-[user]
-        useconfigonly = true
-#+END_SRC
-
-Always rebase, never merge.
-#+BEGIN_SRC conf
-[pull]
-        rebase = true
-#+END_SRC
-
 Setup the proxy for access to external git repos
 #+BEGIN_SRC conf
 [http]
@@ -167,6 +153,11 @@ export EDITOR=/usr/intel/bin/vim
 export SHELL=/usr/intel/bin/bash
 export LC_ALL=en_US.UTF-8
 #+END_SRC
+
+Set for netbatch
+#+begin_src bash
+export NETBATCH_READY_FORCE_NONE=1
+#+end_src
 
 If not in an interactive shell, stop here
 #+BEGIN_SRC bash
