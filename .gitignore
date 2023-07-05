@@ -4,3 +4,4 @@ fonts/fonts.dir
 scripts/
 fonts/.nfs*
 perl_test.pl
+/fonts/.uuid
