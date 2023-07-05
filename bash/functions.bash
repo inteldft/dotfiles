@@ -46,6 +46,11 @@ dir-size () {
     du -a -h --max-depth=1 "${1:-.}" | sort -h
 }
 
+fjob () {
+    nbjob run --target sc_normal3 --qslot /DCSG/fe/rgr/gnrio/regress --class 'SLES12SP5&&'${1}G
+}
+
+
 man() {
     /usr/intel/bin/tman "$@" || /usr/bin/man "$@"
 }
@@ -97,7 +102,7 @@ rm-old () {
     # find "${2:-.}" -maxdepth 1 -ctime +"$1" | xargs rm -rf
 }
 
-mdcd () {
+take () {
     if [[ ! $1 ]]; then
         echo "must specify a directory"
         return
