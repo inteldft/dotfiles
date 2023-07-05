@@ -147,7 +147,9 @@ sub sendEmails {
     next if $u->{Usage} < $user_threshold;
     my $user = $u->{User};
     my $cdis = cdislookupByIdsid($user);
-    push @MAILTO, $cdis->{email};
+    if (exists $cdis->{email}) {
+        push @MAILTO, $cdis->{email};
+    }
   }
   if ( !$dev_mode ) {
     $MAILTO = join(",",@MAILTO);
@@ -306,7 +308,7 @@ sub GetDiskUsage {
   # 1. change /nfs/site to /nfs/$sitecode and run with --cell $sitecode
   # 2. just leave the path alone
   #
-  # unfortunately there is no way to tell which way I disk will work, so we just
+  # unfortunately there is no way to tell which way a disk will work, so we just
   # need to run both. If the output is empty we try the other way
   if (join("", @output) =~ "---\n---") {
       $d->{stod_path} = $d->{mounted_path};
