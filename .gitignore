@@ -1,5 +1,6 @@
 tmux/bash_history/*
 tmux/resurrect/*
 fonts/fonts.dir
+scripts/
 fonts/.nfs*
 perl_test.pl
