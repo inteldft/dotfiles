@@ -1,2 +1,0 @@
-#!/bin/sh
-cat /nfs/site/home/tjhinckl/.tmux/resurrect/pane_contents/pane-${1}:0.0
