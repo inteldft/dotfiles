@@ -1,0 +1,580 @@
+#!/usr/intel/pkgs/perl/5.14.1-threads/bin/perl -w
+##############################################################################
+# Copyright (c) 2020 Intel Corporation, all rights reserved.
+#
+# THIS PROGRAM IS AN UNPUBLISHED WORK FULLY PROTECTED BY
+# COPYRIGHT LAWS AND IS CONSIDERED A TRADE SECRET BELONGING
+# TO THE INTEL CORPORATION.
+#
+# Created by: joseph.c.zupancic
+# Email     : joseph.c.zupancic@intel.com
+#
+###############################################################################
+use FindBin;
+use lib $FindBin::Bin; # adds this script's directory to the include path
+use lib "$FindBin::Bin/../perllib";
+
+no warnings qw/portable/; # gets rid of the 64-bit scalar int warnings
+use Carp qw/ confess croak cluck carp /; # dumps a stack
+use Getopt::Long;
+use Cwd qw(getcwd chdir);  # so chdir() sets $PWD
+
+
+# Useful common perl modules
+use Data::Dumper;
+use File::Basename;
+#use UsrIntel::R1; # many perl utilities often downloaded from CPAN; # UsrIntel::R1::List;
+use Mail::Mailer qw(sendmail);
+
+my $email_threshold = 80; # send emails after the disk is 90% full
+my $user_threshold = 5; # don't send a user an email if they use less than this percent of the disk
+handleCmdLineOpts(); # take care of the command line arguments
+
+    
+my $PROGRAM_NAME  = basename(Cwd::abs_path($0));
+chomp($sitecode = `/usr/intel/bin/sitecode`);
+
+dump_config_file($dump_cfg_fn) if $dump_cfg_fn;
+
+$disks = readConfigFile($config_fn);
+
+if (scalar(@ARGV) > 0) {
+  $disks = [@ARGV];
+}
+if ( !defined $disks || scalar @$disks == 0 ) {
+  exit 0 if $dump_cfg_fn; # exit if the user only wanted to dump the config file
+  chomp(my $cwd = `realpath .`);
+  $cwd =~ s|^((?:/[^/]+){4}).+$|$1|;
+  $disks = [$cwd];
+}
+
+$DISKS = fixPaths($disks);
+
+my $totals = {};
+foreach my $d ( @$DISKS ) {
+  my %disk_stats;
+  my @usage;
+  InfoMsg("\n", Bare=>1);
+  GetDiskStats($d,\%disk_stats);
+  GetDiskUsage($d, \@usage);
+  $html_msg = showStats($d, \%disk_stats, \@usage);
+  sendEmails($html_msg, $d, \%disk_stats, \@usage);
+}
+
+
+exit(0);
+
+sub dump_config_file {
+  my ($fn) = @_;
+  my $FH = openFileForWriting($fn);
+  print $FH 
+  "\$CONFIG = {
+  DISKS => [qw(
+      /nfs/site/disks/dcsg_0014
+      /nfs/site/disks/dcsg_0060
+      )],
+  email_threshold => 10, # send emails when the total usage of the disk is higher than this
+  user_threshold => 1, # send emails to user that have a percentage higher than this
+  cc => [qw/
+    jenna.s.mayfield\@intel.com
+    /],
+  developer => 'joseph.c.zupancic\@intel.com',
+};
+
+1;";
+  close $FH;
+}
+
+sub readConfigFile {
+  my ($config_fn) = @_;
+  if ( $config_fn ) {
+    die "config file ($config_fn) does not exist" unless -e $config_fn;
+    $config = readPerlFile($config_fn, '$CONFIG');
+    $email_threshold = $config->{email_threshold} if exists $config->{email_threshold};
+    $user_threshold = $config->{user_threshold} if exists $config->{user_threshold};
+    @cc = @{ $config->{cc} } if exists $config->{cc};
+    $developer_email = $config->{developer} if exists $config->{developer};
+    return $config->{DISKS};
+  }
+}
+
+sub fixPaths {
+  my($disks) = @_;
+  my @DISKS;
+  foreach my $disk (@$disks) {
+    my %d;
+    my $disk_orig = $disk;
+    if ($disk =~ m|/nfs/site/|) {
+      if ( -e $disk ) {
+        $d{mounted_path} = $disk;
+      } else {
+        warn "Couldn't find mounted path. Skipping disk $disk_orig";
+        next;
+      }
+      $disk =~ s|/nfs/site/|/nfs/$sitecode/|;
+      $d{stod_path} = $disk;
+    } elsif ($disk =~ m=/nfs/(sc|fc|pdx)/=) {
+      $d{stod_path} = $disk;
+      $disk =~ s=/nfs/(sc|fc|pdx)/=/nfs/site/=;
+      $d{mounted_path} = $disk;
+      if ( !-e $d{mounted_path} ) {
+        warn "Couldn't find mounted path. Skipping disk $disk_orig";
+        next;
+      }
+    } else {
+      warn "Couldn't understand this path. Skipping disk $disk_orig";
+      next;
+    }
+    push @DISKS, \%d;
+  }
+  return \@DISKS;
+}
+
+sub sendEmails {
+  my ($html_message, $d, $disk_stats, $usage) = @_;
+  my $disk = $d->{mounted_path};
+  return if $no_email;
+  return if ($disk_stats->{Used} < $email_threshold);
+  my @MAILTO = ();
+  my $MAILCC = '';
+  my $subject = "Disk Utilization Warning for $d->{mounted_path}";
+  my $msg = '';
+  $msg .= "<body>\n";
+  $msg .= getCSS();
+  $msg .= $html_message;
+  $msg .= "</body>\n";
+  foreach my $u (@$usage) {
+    next if $u->{Usage} < $user_threshold;
+    my $user = $u->{User};
+    my $cdis = cdislookupByIdsid($user);
+    push @MAILTO, $cdis->{email};
+  }
+  if ( !$dev_mode ) {
+    $MAILTO = join(",",@MAILTO);
+    $MAILCC = join(',',@cc);
+  } else {
+    $MAILTO = $developer_email;
+  }
+  print "sending email to $MAILTO\n" unless $cron_mode;
+  sendMail($MAILTO, $MAILCC, $subject, $msg, 'text/html');
+}
+
+sub sendMail{
+  my ($MAILTO, $MAILCC, $subject, $msg, $contentType) = @_;
+
+  if ( 0 ) {
+    print "mailto: $MAILTO\n";
+    print "mailcc: $MAILCC\n";
+    print "subject: $subject\n";
+    return;
+  }
+
+  my $mail = Mail::Mailer->new('sendmail')
+    or die "\n\nCouldn't create a mail object!\n";
+
+  if (!defined $contentType ) {
+    $contentType = "text/plain";
+  }
+
+  my $mail_headers =  {
+    'Content-Type' => "$contentType",
+    To => $MAILTO,
+    Cc => $MAILCC,
+    Subject => "$subject",
+  };
+
+  $mail->open( $mail_headers );
+  $mail->print($msg);
+  $mail->close();
+}
+
+sub cdislookupByIdsid {
+  my ($idsid) = @_;
+  return $idsids{$idsid} if exists $idsids{$idsid};
+  my @info = `cdislookup -i $idsid`;
+  chomp @info;
+  my %cdis = ();
+  foreach my $i ( @info ) {
+    if ( $i =~ m/ccMailName\s*=\s*(.+)/ ) {
+      $cdis{name} = $1;
+    } elsif ( $i =~ m/DomainAddress\s*=\s*(\S+)/ ) {
+      $cdis{email} = $1;
+    }
+  }
+  $idsids{$idsid} = \%cdis; # cache a copy
+  return \%cdis;
+}
+
+sub getCSS {
+  $odd_color = "#F5F5F5";
+  $even_color = "#D5D5D5";
+  $hdr_color = "#C0C0C0";
+  my $msg = '';
+  $msg .= "<style>\n";
+  #$msg .= "body {background-color: powderblue;}\n";
+  $msg .= "#odd {background-color: $odd_color;}\n";
+  $msg .= "#even {background-color: $even_color;}\n";
+  $msg .= "#hdr_row {background-color: $hdr_color;}\n";
+  $msg .= "#eta_overdue {color: #F00000;}\n";
+  $msg .= "#ars_open {color: #F00000;}\n";
+  $msg .= "#eta_missing {background-color: #F00000;}\n";
+  $msg .= "#warning {color: #F00000;}\n";
+  $msg .= "</style>\n";
+  return $msg;
+}
+
+sub showStats {
+  my ($d, $disk_stats, $usage) = @_;
+  my $disk = $d->{mounted_path};
+  my @fields = (
+      { Name => 'Name',    Format => '%25.25s' },
+      { Name => 'User',    Format => '%10.10s' },
+      { Name => 'UsageGB', Format => '%8.8s' },
+      { Name => 'Pct',     Format => '%6.6s' },
+   );
+   my $fmt = '|';
+   my @cols;
+   foreach my $f (@fields) {
+      $fmt .= "$f->{Format}|";
+      #push(@blanks, "");
+      push(@cols, $f->{Name});
+   }
+   my $header_line = sprintf($fmt, @cols);
+   my $dashed_line = '-' x length($header_line);
+   my $txt_msg = "$dashed_line\n";
+   my $html_msg;
+   $txt_msg .= "DISK: $disk";
+   $html_msg .= "<h2>$disk</h2> ";
+   if (defined($disk_stats->{Avail})) {
+      $txt_msg .= " Avail=$disk_stats->{Avail}";
+      $html_msg .= "<h3>$disk_stats->{Avail} of ";
+      $totals->{$disk}{Avail} = $disk_stats->{Avail};
+   }
+   if (defined($disk_stats->{Size})) {
+      $txt_msg .= " Size=$disk_stats->{Size}";
+      $html_msg .= "$disk_stats->{Size} Available</h3>";
+      $totals->{$disk}{Size} = $disk_stats->{Size};
+   }
+   if (defined($disk_stats->{UsePct})) {
+      $txt_msg .= " UsedPct=$disk_stats->{UsePct}";
+      $html_msg .= "<h3>$disk_stats->{UsePct} Used</h3>";
+      $totals->{$disk}{UsePct} = $disk_stats->{UsePct};
+      my $used = $disk_stats->{UsePct};
+      $used =~ m/(\d+)/;
+      $disk_stats->{Used} = $1;
+   }
+   $html_msg .= "\n";
+   $txt_msg .= "\n$dashed_line\n$header_line\n$dashed_line\n";
+   $html_msg .= "<table>\n";
+   $html_msg .= "<tr id=\"hdr_row\"><th>";
+   $html_msg .= join("</th><th>",@cols);
+   $html_msg .= "</th></tr>\n";
+   my $total_pct  = 0;
+   my $max_pct    = 100;
+   my $cnt = 0;
+   foreach my $u (reverse sort { $a->{Usage} <=> $b->{Usage} } @$usage) {
+     my $id = $cnt%2 == 0 ? 'odd' : 'even';
+     my $cdis = cdislookupByIdsid($u->{User});
+     $u->{Name} = $cdis->{name} ? $cdis->{name} : "";
+     $txt_msg .= sprintf("$fmt %s\n", $u->{Name}, $u->{User}, $u->{UsageGB}, $u->{Pct}, ($u->{Pct} < $user_threshold ? '' : '*'));
+     $html_msg .= "<tr id=\"$id\"><td>";
+     $html_msg .= join("</td><td>", ($u->{Name}, $u->{User}, $u->{UsageGB}, $u->{Pct}));
+     $html_msg .= "</td></tr>\n";
+     $totals->{$disk}{Users}{$u->{User}}{UsageGB} = $u->{UsageGB};
+     $total_pct += $u->{Pct};
+     $cnt++;
+   }
+   $html_msg .= "</table>\n";
+   $txt_msg .= "$dashed_line\n";
+   InfoMsg($txt_msg, Bare=>1);
+   return $html_msg;
+
+}
+
+
+sub GetDiskUsage {
+  my ($d, $ret) = @_;
+  my $disk = $d->{mounted_path};
+  my $disk_site = $d->{stod_path};
+  if (! -e $disk) {
+    warn("Application error : Disk $disk does not exist\n");
+    return 1;
+  }
+  my @output = stodstatus("--cell $sitecode", $d->{stod_path});
+
+  # This is a total hack to fix issues with the disks. There are two ways to run stodstatus
+  # 1. change /nfs/site to /nfs/$sitecode and run with --cell $sitecode
+  # 2. just leave the path alone
+  #
+  # unfortunately there is no way to tell which way I disk will work, so we just
+  # need to run both. If the output is empty we try the other way
+  if (join("", @output) =~ "---\n---") {
+      $d->{stod_path} = $d->{mounted_path};
+      @output = stodstatus("", $d->{stod_path});
+  }
+
+  my @uses;
+  my $total_usage = 0;
+  foreach my $line (@output) {
+    if ($line =~ /^([^\s]+)\s+(\d+)\s*$/) {
+      my ($user, $usage) = ($1, $2);
+      if ($usage != 0) {
+        my $usage_gb = sprintf("%.2f", $usage / 1000);
+        push(@uses, { User => $user, Usage => $usage, UsageGB => $usage_gb } );
+        $total_usage += $usage;
+      }
+    }
+  }
+  if ($total_usage > 0) {
+    foreach my $record (@uses) {
+      my $pct = sprintf("%.2f", $record->{Usage} / $total_usage * 100);
+      push(@$ret, { %$record, Pct => $pct });
+    }
+  }
+  return 0;
+}
+
+sub stodstatus {
+    my ($cell, $disk) = @_;
+    my $cmd = "/usr/intel/bin/stodstatus storage-users $cell --fields User,Usage --sort-by Usage \"Path=~'$disk'\"";
+    my @output = `$cmd`;
+    return @output;
+}
+
+
+sub GetDiskStats {
+  my ($d, $ret) = @_;
+  my $disk = $d->{mounted_path};
+  if (! -e $disk) {
+    warn("$disk : Disk does not exist\n");
+  }
+  #my @output;
+  # Filesystem            Size  Used Avail Use% Mounted on
+  # fccfs01n01a-01:/dnv.emu.006
+  #                   1.1T  929G  112G  90% /nfs/fc/disks/dnv.emu.006
+  my @output = `df -h $disk`;
+  foreach my $line (@output) {
+    if ($line =~ /\s+([0-9\.]+[GT])\s+([0-9\.]+[GT])\s+([0-9\.]+[GTM])\s+(\d+%)\s+/) {
+      my ($size, $used, $avail, $use_pct) = ($1, $2, $3, $4);
+      if ($size =~ /^([0-9\.]+)T$/) {
+        $size = ($1 * 1000) . "G";
+      }
+      if ($used =~ /^([0-9\.]+)T$/) {
+        $used = ($1 * 1000) . "G";
+      }
+      if ($avail =~ /^([0-9\.]+)T$/) {
+        $avail = ($1 * 1000) . "G";
+      }
+      $ret->{Size}   = $size;
+      $ret->{Used}   = $used;
+      $ret->{Avail}  = $avail;
+      $ret->{UsePct} = $use_pct;
+      return 0;
+    }
+  }
+  warn("Unexpected/unsupported 'df' output:\n" . join("", @output) );
+  return 1;
+}
+
+
+
+sub handleCmdLineOpts {
+  # Setup reading cmdline options
+  $Getopt::Long::ignorecase = 1;
+  $Getopt::Long::autoabbrev = 1;
+  $Getopt::Long::bundling   = 0;
+
+  # define the global variables based off the command line options
+  $main::opt_help = '';
+  my %longopts = ( 
+      "config|c=s"           => \$config_fn,
+      "dump_example_cfg|d=s" => \$dump_cfg_fn,
+      "threshold|t=i"        => \$email_threshold,
+      "user_threshold|u=i"   => \$user_threshold,
+      "no_email"             => \$no_email,
+      "development|dev"      => \$dev_mode,
+      "cron"                 => \$cron_mode,
+      "help|h"   => \$opt_help,
+      );
+
+  # Get the command-line options.
+  if ( !GetOptions(%longopts) ) {
+    printf("-F- Unrecognized option encountered! Use -h for usage\n");
+    PrintUsageAndExit(1);
+  }
+  PrintUsageAndExit(0) if $opt_help;
+
+}
+
+sub PrintUsageAndExit {
+  my ($retStat) = @_;
+  PrintUsage();
+  exit ($retStat);
+}
+
+sub PrintUsage {
+  my $program = basename($0);
+  print << "USAGE";
+
+Usage:
+  $program [Options] [<disk1> <disk2> ...]
+
+Description:
+  Checks the disk utilization and sends users a warning email
+
+Options:
+    -c  | --config <config_file>
+    -t  | --threshold <percent>          # if the disk is fuller than <percent>, send an email
+    -u  | --user_threshold <percent>     # if the user has more than <percent>, send an email to that user
+          --no_email                     # don't sent any emails
+          --cron                         # if set, suppress output
+  --dev | --development                  # if set, this script is beging developed and will only send emails to \$USER
+    -d  | --dump_example_cfg <filename>  # dumps an example config file to <filename>
+    -h  | --help  Print this usage
+
+Examples:
+  # show the help message
+  $program -h
+
+USAGE
+
+}
+
+
+sub readPerlFile {
+  my ($fn, $varname, $debug) = @_;
+  unless ( $fn ) {
+    die "ERROR: readPerlFile(): Need to specify a perl file\n";
+  }
+  my $fnz = '';
+  my $isGzipped = 0;
+  if ( -f $fn && $fn =~ m/(.+)\.gz$/i) {
+    # the caller specified a file with the .gz suffix, and that file was found
+    $isGzipped++;
+    $fnz = $fn;
+    $fn = $1;
+  } elsif ( !-f $fn && $fn =~ m/(.+)\.gz$/i && -f $1) {
+    # the caller specified a gzipped file that was not found, but the unzipped file was found
+    $fn = $1;
+  } elsif ( !-f $fn && -f "$fn.gz") {
+    # the caller specified a file without the .gz suffix and that file is gzipped
+    $isGzipped++;
+    $fnz = "$fn.gz";
+  } elsif ( ! -f $fn ) {
+    die "ERROR: readPerlFile(): $fn does not exist. Exiting\n";
+  }
+  my $rc;
+  if ( $isGzipped ) {
+    my $tmpFn = "/tmp/readPerlFIle.".int(rand(10000)).".pl";
+    my $cmd = "gunzip -c $fnz > $tmpFn";
+    print "### Gunzipping Perl file before reading: $cmd\n" if $debug;
+    system($cmd);
+    print "### Reading in tmp Perl file: $tmpFn\n" if $debug;
+    $rc = do $tmpFn;
+    $cmd = "rm $tmpFn";
+    print "### Cleaning up tmp Perl file: $cmd\n" if $debug;
+    system($cmd);
+  } else {
+    print "### Reading in Perl file: $fn\n" if $debug;
+    $rc = do $fn;
+  }
+  if ($@) {
+    print "$@\n";
+    die "ERROR: Reading Perl file failed. ($fn)  Exiting...\n";
+  }
+  die "couldn't do $fn $!" unless ( defined $rc );
+  
+  die "couldn't run $fn" unless ( $rc ); # did the file return 1? That's the common problem
+
+  no strict 'refs';
+  if ($varname =~ m/^\$(\w+)/) {
+    if ( defined ${"$1"} ) {
+      return ${"$1"};
+    }
+  } elsif ($varname =~ m/^\@(\w+)/) {
+    if ( defined @{"$1"} ) {
+      return \@{"$1"};
+    }
+  } elsif ($varname =~ m/^\%(\w+)/) {
+    return \%{"$1"};
+  }
+}
+
+
+sub InfoMsg {
+  my ($msg, %options) = @_;
+  return if $cron_mode;
+  if ($options{Bare}) {
+    print $msg;
+  } else {
+    print "$PROGRAM_NAME: $msg";
+  }
+}
+
+
+sub openFileForWriting {
+  my ($fn, $gzip) = @_;
+  my $FH;
+  if ( $gzip ) {
+    my $gzip_fn = ($fn =~ m/\.gz$/) ? $fn : "$fn.gz";
+    open($FH, "|gzip -c > $gzip_fn") or confess "Couldn't open 'gzip -c' pipe for file: $gzip_fn\n$!"; 
+  } else {
+    open($FH, "> $fn") or confess "Couldn't open file ($fn) for writing: $!"; 
+  }
+  return $FH;
+}
+
+
+
+#############################################################################
+# Main Program POD - Plain Old Documenation
+#############################################################################
+
+=pod
+
+=head1 NAME
+
+disk_warn
+
+=head1 DESCRIPTION
+
+Describe your script here!
+
+=head1 USAGE
+
+Run 'disk_warn -h'
+
+=head1 SUBROUTINES
+
+=over 4
+
+=cut
+
+
+#############################################################################
+# Subroutines
+#############################################################################
+
+=pod
+
+=item ExampleSubroutine
+
+ExampleSubroutine prints out a simple message
+
+=cut
+
+sub ExampleSubroutine 
+{
+    print "ExmapleSubroutine called\n";
+}
+
+#############################################################################
+# Footer POD - Plain Old Documenation
+#############################################################################
+=pod
+
+=head1 AUTHOR
+
+joseph.c.zupancic, E<lt>joseph.c.zupancic@intel.comE<gt>, ?PHONE?
+
+=cut
