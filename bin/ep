@@ -6,9 +6,7 @@ echo "$text" > "$temp"
 read -r -d '' lisp <<EOF
 (let ((buffer (generate-new-buffer-name "pipe")))
   (switch-to-buffer buffer)
-  (insert-file-contents "$temp")
-  (when (fboundp 'persp-add-buffer)
-    (persp-add-buffer buffer)))
+  (insert-file-contents "$temp"))
 EOF
 
 emacsclient --eval "(progn $lisp $1)"
