@@ -62,7 +62,7 @@ supported, so use explicit versions always
 
 Use latest emacs duh
 #+BEGIN_SRC conf
-P:emacs 26.3
+P:emacs 28.2
 #+END_SRC
 
 Tool versions needed for verilator
@@ -94,11 +94,6 @@ which has a valid SSL certificate for all websites I can find. But I don't want
 to use that for all git needs because 2.12 is a little faster.
 #+BEGIN_SRC conf
 P:git 2.12.0a
-#+END_SRC
-
-Try to fix tramp compression issue
-#+BEGIN_SRC conf
-P:gzip 1.6
 #+END_SRC
 
 Needed for PDF tools
