@@ -12,12 +12,8 @@ alias win-xl='xrandr -s 1920x1200'
 alias win-l='xrandr -s 1920x1080'
 alias win-m='xrandr -s 1536x864'
 
-if [[ $EC_SITE == 'fc' ]]; then
-    alias srcenv='eval $(csh-source -inline -noalias /p/hdk/rtl/hdk.rc -cfg shdk73)'
-else
-    alias srcenv='eval $(csh-source -inline -noalias /p/hdk/rtl/hdk.rc -cfg shdk74)'
-    # source /p/hdk/rtl/cad/x86-64_linux26/intel/Modules/3.2.10.2/init/bash; module load lv_cfg; unset module
-fi
+alias srcenv='eval $(csh-source -inline -noalias /p/hdk/rtl/hdk.rc -cfg shdk74)'
+# source /p/hdk/rtl/cad/x86-64_linux26/intel/Modules/3.2.10.2/init/bash; module load lv_cfg; unset module
 
 alias phases='gzgrep "started\." acerun.log* | grep sla_tb_env | cut -d"@" -f2'
 alias ports='netstat -lptu'
