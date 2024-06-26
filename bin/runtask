@@ -1,0 +1,58 @@
+#!/bin/sh
+
+cores=1
+mem=62
+name=task
+cmd=''
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -cores) cores="$2" ; shift ;;
+        -mem)    mem="$2" ; shift ;;
+        -name) name="$2" ; shift ;;
+        -jobs) jobs="$2" ; shift ;;
+        -dry_run) dry_run=1;;
+        -help)        usage=1 ;;
+        *) cmd+="$1 ";;
+    esac
+    shift
+done
+
+id=$(printf '%05d' $RANDOM)
+task_name=$name.$id
+
+task_file=$(mktemp)
+
+echo "$cmd"
+
+cat <<EOF > $task_file
+Task $task_name
+{
+    SubmissionArgs --class 'SLES12SP5&&${mem}G&&${cores}C' --incremental-log --on-job-finish '( ExitStatus < 0 && ExitStatus != -7 && ExitStatus != -8 && ExitStatus != -9 && ExitStatus != -10 && ExitStatus != -11 && ExitStatus != -305 && ExitStatus != -316 && ExitStatus != -1001 && ExitStatus != -3002 && ExitStatus != -3017 && ExitStatus != -3023 ):Requeue(3), ( ExitStatus == -1001 ):Requeue(1)'
+    WorkArea $PWD
+
+    Queue sc_normal3
+    {
+        Qslot /DCSG/fe/rgr/gnrio/regress
+        MaxWaiting 1000
+        MaxJobs 1000
+    }
+
+    Jobs
+    {
+        nbjob run --log-file $PWD/netbatch.$task_name.log $cmd
+    }
+}
+EOF
+
+if [[ $dry_run ]]; then
+    echo "task file = $task_file"
+else
+    feeder_name=${USER}_${HOST}_feeder
+
+    if nbfeeder list | grep $feeder_name; then
+        nbtask load --target $feeder_name $task_file
+    else
+        nbfeeder start --name $feeder_name --join --task $task_file
+    fi
+fi
